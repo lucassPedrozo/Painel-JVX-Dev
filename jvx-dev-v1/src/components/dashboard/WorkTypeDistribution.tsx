@@ -14,7 +14,7 @@ export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
     const typeData = new Map<string, { count: number, value: number }>()
     
     works.forEach(work => {
-      const type = work.typeWork
+      const type = work.site_type || 'Não especificado'
       const value = parseValue(work.value)
       
       if (!typeData.has(type)) {
@@ -55,8 +55,8 @@ export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
   return (
     <div className="rounded-xl border bg-card shadow-sm p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-bold">Distribuição por Tipo</h3>
-        <p className="text-sm text-muted-foreground">Quantidade de projetos por tipo</p>
+        <h3 className="text-lg font-bold">Distribuição por Tipo de Site</h3>
+        <p className="text-sm text-muted-foreground">Quantidade de projetos por tipo de site</p>
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>

@@ -50,8 +50,8 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
     }
   }
 
-  const isPaid = work.paymentStatus === 'Pago'
-  const hasRating = work.rating_aparencia !== null && work.rating_aparencia !== undefined
+  const isPaid = work.payment_status === 'Pago'
+  const hasRating = false // Removido sistema de rating por enquanto
 
   return (
     <>
@@ -76,10 +76,7 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
                 </DropdownMenuItem>
               )}
               
-              <DropdownMenuItem onClick={() => setRatingOpen(true)}>
-                <Star className="h-4 w-4 mr-2" />
-                {hasRating ? 'Editar Avaliação' : 'Avaliar Projeto'}
-              </DropdownMenuItem>
+
               
               <DropdownMenuSeparator />
               

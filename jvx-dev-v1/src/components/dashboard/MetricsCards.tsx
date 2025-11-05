@@ -11,7 +11,7 @@ export function MetricsCards({ works }: MetricsCardsProps) {
   const metrics = React.useMemo(() => {
     const totalValue = works.reduce((acc, w) => acc + parseValue(w.value), 0)
     const paidValue = works
-      .filter(w => w.paymentStatus === 'Pago')
+      .filter(w => w.payment_status === 'Pago')
       .reduce((acc, w) => acc + parseValue(w.value), 0)
     const pendingValue = totalValue - paidValue
     
@@ -23,14 +23,17 @@ export function MetricsCards({ works }: MetricsCardsProps) {
     thisMonth.setDate(1)
     thisMonth.setHours(0, 0, 0, 0)
     
-    const thisMonthWorks = works.filter(w => new Date(w.date) >= thisMonth)
+    const thisMonthWorks = works.filter(w => {
+      const deliveryDate = new Date(w.delivery_date)
+      return deliveryDate >= thisMonth
+    })
     const thisMonthValue = thisMonthWorks.reduce((acc, w) => acc + parseValue(w.value), 0)
     
     const lastMonth = new Date(thisMonth)
     lastMonth.setMonth(lastMonth.getMonth() - 1)
     const lastMonthWorks = works.filter(w => {
-      const date = new Date(w.date)
-      return date >= lastMonth && date < thisMonth
+      const deliveryDate = new Date(w.delivery_date)
+      return deliveryDate >= lastMonth && deliveryDate < thisMonth
     })
     const lastMonthValue = lastMonthWorks.length > 0 
       ? lastMonthWorks.reduce((acc, w) => acc + parseValue(w.value), 0) 
@@ -40,9 +43,9 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       ? ((thisMonthValue - lastMonthValue) / lastMonthValue) * 100 
       : 0
     
-    const conversionRate = works.length > 0 
-      ? (works.filter(w => w.paymentStatus === 'Pago').length / works.length) * 100 
-      : 0
+    const deliveredCount = works.filter(w => w.status === 'Entregue').length
+    const paidCount = works.filter(w => w.payment_status === 'Pago').length
+    const pendingCount = works.filter(w => w.status === 'Não Entregue').length
     
     return {
       totalValue,
@@ -52,7 +55,9 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       developers,
       thisMonthValue,
       monthGrowth,
-      conversionRate,
+      deliveredCount,
+      paidCount,
+      pendingCount,
       thisMonthCount: thisMonthWorks.length
     }
   }, [works])
@@ -62,30 +67,29 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       title: 'Total de Projetos',
       value: works.length.toString(),
       icon: Package,
-      description: 'Desenvolvimentos realizados',
+      description: 'Projetos cadastrados',
       color: 'text-blue-600 bg-blue-100 dark:bg-blue-950'
     },
     {
-      title: 'Projetos Este Mês',
-      value: metrics.thisMonthCount.toString(),
-      icon: Calendar,
-      description: `${metrics.monthGrowth >= 0 ? '+' : ''}${metrics.monthGrowth.toFixed(0)}% vs mês anterior`,
-      trend: metrics.monthGrowth,
-      color: 'text-purple-600 bg-purple-100 dark:bg-purple-950'
-    },
-    {
-      title: 'Projetos Concluídos',
-      value: works.filter(w => w.paymentStatus === 'Pago').length.toString(),
+      title: 'Projetos Entregues',
+      value: metrics.deliveredCount.toString(),
       icon: TrendingUp,
-      description: `${metrics.conversionRate.toFixed(1)}% do total`,
+      description: `${((metrics.deliveredCount / works.length) * 100).toFixed(1)}% do total`,
       color: 'text-green-600 bg-green-100 dark:bg-green-950'
     },
     {
-      title: 'Em Aberto',
-      value: works.filter(w => w.paymentStatus !== 'Pago').length.toString(),
+      title: 'Projetos Pendentes',
+      value: metrics.pendingCount.toString(),
       icon: TrendingDown,
-      description: 'Aguardando pagamento',
+      description: 'Aguardando entrega',
       color: 'text-orange-600 bg-orange-100 dark:bg-orange-950'
+    },
+    {
+      title: 'Pagamentos Recebidos',
+      value: metrics.paidCount.toString(),
+      icon: DollarSign,
+      description: `${((metrics.paidCount / works.length) * 100).toFixed(1)}% do total`,
+      color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-950'
     },
     {
       title: 'Desenvolvedores Ativos',
@@ -97,9 +101,9 @@ export function MetricsCards({ works }: MetricsCardsProps) {
     {
       title: 'Receita Total',
       value: formatCurrency(metrics.totalValue),
-      icon: DollarSign,
+      icon: Calendar,
       description: `Ticket médio: ${formatCurrency(metrics.averageTicket)}`,
-      color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-950'
+      color: 'text-purple-600 bg-purple-100 dark:bg-purple-950'
     }
   ]
 
@@ -111,12 +115,6 @@ export function MetricsCards({ works }: MetricsCardsProps) {
             <div className={`p-2 rounded-lg ${card.color}`}>
               <card.icon className="h-4 w-4" />
             </div>
-            {card.trend !== undefined && (
-              <div className={`flex items-center text-xs font-medium ${card.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {card.trend >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                {Math.abs(card.trend).toFixed(1)}%
-              </div>
-            )}
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">{card.title}</p>

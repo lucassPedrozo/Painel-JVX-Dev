@@ -35,7 +35,13 @@
     "start": "concurrently \"npm run server\" \"npm run dev\"",
     "import": "node importar-csv-direto.js",
     "test-csv": "node testar-importacao-csv.js",
-    "verify": "node verificar-dados.js"
+    "verify": "node verificar-dados.js",
+    "test-db": "node testar-conexao-db.js",
+    "test-api": "node testar-api-completo.js",
+    "test-stats": "node testar-estatisticas.js",
+    "fix-user": "node verificar-usuario.js",
+    "populate": "node popular-banco-completo.js",
+    "check-structure": "node verificar-estrutura-tabela.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -89,6 +95,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "node-fetch": "^3.3.2",
     "tw-animate-css": "^1.3.7",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",

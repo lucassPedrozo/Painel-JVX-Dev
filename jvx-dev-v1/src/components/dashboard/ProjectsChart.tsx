@@ -9,25 +9,31 @@ interface ProjectsChartProps {
 
 export function ProjectsChart({ works }: ProjectsChartProps) {
   const data = React.useMemo(() => {
-    const monthlyData = new Map<string, { total: number, completed: number, pending: number, revenue: number }>()
+    const monthlyData = new Map<string, { total: number, delivered: number, pending: number, paid: number, revenue: number }>()
     
     works.forEach(work => {
-      const date = new Date(work.date)
+      const date = new Date(work.delivery_date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const isCompleted = work.paymentStatus === 'Pago'
+      const isDelivered = work.status === 'Entregue'
+      const isPaid = work.payment_status === 'Pago'
       const value = parseValue(work.value)
       
       if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, { total: 0, completed: 0, pending: 0, revenue: 0 })
+        monthlyData.set(monthKey, { total: 0, delivered: 0, pending: 0, paid: 0, revenue: 0 })
       }
       
       const current = monthlyData.get(monthKey)!
       current.total += 1
       current.revenue += value
-      if (isCompleted) {
-        current.completed += 1
+      
+      if (isDelivered) {
+        current.delivered += 1
       } else {
         current.pending += 1
+      }
+      
+      if (isPaid) {
+        current.paid += 1
       }
     })
     
@@ -36,8 +42,9 @@ export function ProjectsChart({ works }: ProjectsChartProps) {
       .slice(-12)
       .map(([month, values]) => ({
         month: new Date(month + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        concluídos: values.completed,
+        entregues: values.delivered,
         pendentes: values.pending,
+        pagos: values.paid,
         total: values.total,
         receita: values.revenue
       }))
@@ -49,8 +56,9 @@ export function ProjectsChart({ works }: ProjectsChartProps) {
       return (
         <div className="bg-card border rounded-lg shadow-lg p-3">
           <p className="font-semibold text-sm mb-2">{data.month}</p>
-          <p className="text-xs text-green-600">Concluídos: {data.concluídos}</p>
+          <p className="text-xs text-green-600">Entregues: {data.entregues}</p>
           <p className="text-xs text-orange-600">Pendentes: {data.pendentes}</p>
+          <p className="text-xs text-blue-600">Pagos: {data.pagos}</p>
           <p className="text-xs font-semibold text-foreground">Total: {data.total} projetos</p>
           <p className="text-xs text-muted-foreground mt-1">Receita: {formatCurrency(data.receita)}</p>
         </div>
@@ -62,8 +70,8 @@ export function ProjectsChart({ works }: ProjectsChartProps) {
   return (
     <div className="rounded-xl border bg-card shadow-sm p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-bold">Projetos Entregues por Mês</h3>
-        <p className="text-sm text-muted-foreground">Evolução de entregas nos últimos 12 meses</p>
+        <h3 className="text-lg font-bold">Projetos por Mês</h3>
+        <p className="text-sm text-muted-foreground">Evolução de entregas e pagamentos nos últimos 12 meses</p>
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
@@ -72,7 +80,7 @@ export function ProjectsChart({ works }: ProjectsChartProps) {
           <YAxis className="text-xs" />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey="concluídos" fill="#10b981" name="Concluídos" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="entregues" fill="#10b981" name="Entregues" radius={[4, 4, 0, 0]} />
           <Bar dataKey="pendentes" fill="#f59e0b" name="Pendentes" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>

@@ -20,6 +20,7 @@ export interface Work {
   delivery_month: string
   delivery_year: number
   status: string
+  developer_status: string
   payment_status: string
   observations?: string
 }
@@ -66,6 +67,7 @@ export const api = {
       body: JSON.stringify({
         ...work,
         delivery_date: new Date(work.delivery_date).toISOString(),
+        developer_status: work.developer_status || 'Em Andamento',
         observations: work.observations || null
       })
     })
@@ -88,6 +90,18 @@ export const api = {
       throw new Error(error.error || 'Erro ao atualizar trabalho')
     }
     return response.json()
+  },
+
+  async updateDeveloperStatus(id: number, status: 'Em Andamento' | 'Concluído'): Promise<void> {
+    const response = await fetch(`${API_URL}/works/${id}/mark-completed`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ developer_status: status })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao atualizar status')
+    }
   },
 
   async deleteWork(id: number): Promise<void> {

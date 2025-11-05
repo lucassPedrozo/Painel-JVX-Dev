@@ -177,11 +177,11 @@ app.get("/works", authenticateToken, asyncHandler(async (req, res) => {
 
 // POST novo work (apenas master)
 app.post("/works", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
-  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations } = req.body;
   
-  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   
-  const [result] = await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status || 'Em Andamento', payment_status, observations]);
+  const [result] = await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations]);
   
   console.log(`✓ Projeto criado: ID ${result.insertId} - ${domain}`);
   
@@ -191,7 +191,7 @@ app.post("/works", authenticateToken, requireMaster, asyncHandler(async (req, re
 // PUT para atualizar work (apenas master)
 app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations } = req.body;
 
   // Verificar se o registro existe
   const [existing] = await pool.execute("SELECT * FROM works WHERE id = ?", [id]);
@@ -201,16 +201,16 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
   }
 
   // Atualizar o registro
-  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ? WHERE id = ?";
+  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, payment_status = ?, observations = ? WHERE id = ?";
   
-  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, id]);
+  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations, id]);
   
   console.log(`✓ Projeto atualizado: ID ${id} - ${domain}`);
   
   res.json({
     success: true,
     message: "Trabalho atualizado com sucesso",
-    updatedWork: { id, developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations }
+    updatedWork: { id, developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations }
   });
 }));
 
@@ -223,41 +223,6 @@ app.patch("/works/:id/mark-paid", authenticateToken, requireMaster, asyncHandler
   console.log(`✓ Projeto marcado como pago: ID ${id}`);
   
   res.json({ success: true, message: "Projeto marcado como pago" });
-}));
-
-// PATCH para desenvolvedor marcar como concluído (apenas seus próprios projetos)
-app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { developer_status } = req.body;
-  
-  // Verificar se o projeto existe e se pertence ao desenvolvedor (para usuários padrão)
-  const [existing] = await pool.execute("SELECT * FROM works WHERE id = ?", [id]);
-  
-  if (existing.length === 0) {
-    return res.status(404).json({ error: "Projeto não encontrado" });
-  }
-  
-  const work = existing[0];
-  
-  // Se for usuário padrão, só pode alterar seus próprios projetos
-  if (req.user.role === 'standard' && work.developer !== req.user.developerName) {
-    return res.status(403).json({ error: "Você só pode alterar o status dos seus próprios projetos" });
-  }
-  
-  // Validar status
-  if (!['Em Andamento', 'Concluído'].includes(developer_status)) {
-    return res.status(400).json({ error: "Status inválido. Use 'Em Andamento' ou 'Concluído'" });
-  }
-  
-  await pool.execute("UPDATE works SET developer_status = ? WHERE id = ?", [developer_status, id]);
-  
-  console.log(`✓ Status do desenvolvedor atualizado: ID ${id} - ${developer_status} por ${req.user.username}`);
-  
-  res.json({ 
-    success: true, 
-    message: `Projeto marcado como ${developer_status.toLowerCase()}`,
-    developer_status 
-  });
 }));
 
 // DELETE work (apenas master)

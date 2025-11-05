@@ -12,7 +12,7 @@ import {
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 import { QuickActions } from './QuickActions'
-import { RatingStars } from './RatingStars'
+import { DeveloperStatusButton } from './DeveloperStatusButton'
 
 interface WorksTableProps {
   works: Work[]
@@ -74,6 +74,9 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                     {getSortIcon("value")}
                   </Button>
                 </th>
+                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[120px]">
+                  Status Dev
+                </th>
                 <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[130px]">
                   Pagamento
                 </th>
@@ -109,7 +112,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={11} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         <span>Carregando trabalhos...</span>
@@ -118,7 +121,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                   </tr>
                 ) : works.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={11} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-4xl">📋</span>
                         <span>Nenhum trabalho encontrado</span>
@@ -179,6 +182,17 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                           <span className="text-sm font-bold text-foreground">
                             {formatCurrency(parseValue(work.value))}
                           </span>
+                        </td>
+                        <td className="px-4 py-4 w-[120px]">
+                          <div className="flex flex-col gap-1">
+                            <Badge 
+                              variant={work.developer_status === 'Concluído' ? "default" : "secondary"}
+                              className="font-medium whitespace-nowrap text-xs"
+                            >
+                              {work.developer_status}
+                            </Badge>
+                            <DeveloperStatusButton work={work} onUpdate={onDelete} />
+                          </div>
                         </td>
                         <td className="px-4 py-4 w-[130px]">
                           <Badge 

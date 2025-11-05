@@ -26,21 +26,24 @@ function useRadarData() {
 
     React.useEffect(() => {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-        fetch(`${API_URL}/works`)
-            .then((res) => res.json())
-            .then((works: any[]) => {
-                const grouped: Record<string, number> = {}
-                works.forEach((w) => {
-                    const dev = w.developer || "Sem nome"
-                    grouped[dev] = (grouped[dev] || 0) + 1
-                })
-
-                const arr = Object.entries(grouped).map(([dev, total]) => ({
-                    dev,
-                    total,
-                }))
-
-                setData(arr)
+        const token = localStorage.getItem('jvx_token')
+        
+        if (!token) {
+            console.error('Token não encontrado')
+            return
+        }
+        
+        fetch(`${API_URL}/stats/by-developer`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error('Erro ao carregar estatísticas')
+                return res.json()
+            })
+            .then((stats: any[]) => {
+                setData(stats)
             })
             .catch(err => console.error('Erro ao carregar dados do radar:', err))
     }, [])

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FormField } from "@/components/FormField"
 import { api } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES, DELIVERY_STATUS } from '@/lib/constants'
 import { normalizeUrl } from '@/lib/utils'
 
@@ -17,6 +18,12 @@ interface WorkDialogProps {
 }
 
 export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
+  const { user } = useAuth()
+  
+  // Só mostrar para usuários master
+  if (!user || user.role !== 'master') {
+    return null
+  }
   const [developer, setDeveloper] = React.useState("")
   const [deadlineType, setDeadlineType] = React.useState("Normal")
   const [value, setValue] = React.useState("")

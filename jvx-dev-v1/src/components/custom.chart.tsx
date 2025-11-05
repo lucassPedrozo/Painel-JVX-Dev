@@ -29,20 +29,28 @@ function useChartData() {
     const [chartData, setChartData] = React.useState<{ date: string, all: number }[]>([])
     React.useEffect(() => {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-        fetch(`${API_URL}/works`)
-            .then(res => res.json())
+        const token = localStorage.getItem('jvx_token')
+        
+        if (!token) {
+            console.error('Token não encontrado')
+            return
+        }
+        
+        fetch(`${API_URL}/stats/by-date`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Erro ao carregar estatísticas')
+                return res.json()
+            })
             .then((data: any[]) => {
-                const grouped: Record<string, { all: number }> = {}
-                data.forEach((item) => {
-                    const d = new Date(item.date)
-                    const dateStr = d.toISOString().slice(0, 10)
-                    if (!grouped[dateStr]) grouped[dateStr] = { all: 0 }
-                    grouped[dateStr].all += 1
-                })
-                let arr = Object.entries(grouped).map(([date, val]) => ({ date, ...val }))
-                arr.sort((a, b) => a.date.localeCompare(b.date))
-
-                setChartData(arr)
+                const formattedData = data.map(item => ({
+                    date: item.date,
+                    all: item.total
+                }))
+                setChartData(formattedData)
             })
             .catch(err => console.error('Erro ao carregar dados do gráfico:', err))
     }, [])

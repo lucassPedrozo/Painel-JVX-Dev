@@ -9,22 +9,22 @@ interface TechnologyStatsProps {
 
 export function TechnologyStats({ works }: TechnologyStatsProps) {
   const data = React.useMemo(() => {
-    const techData = new Map<string, { count: number, value: number }>()
+    const deadlineData = new Map<string, { count: number, value: number }>()
     
     works.forEach(work => {
-      const tech = work.template || 'Não especificado'
+      const deadline = work.deadline_type || 'Normal'
       const value = parseValue(work.value)
       
-      if (!techData.has(tech)) {
-        techData.set(tech, { count: 0, value: 0 })
+      if (!deadlineData.has(deadline)) {
+        deadlineData.set(deadline, { count: 0, value: 0 })
       }
       
-      const current = techData.get(tech)!
+      const current = deadlineData.get(deadline)!
       current.count += 1
       current.value += value
     })
     
-    return Array.from(techData.entries())
+    return Array.from(deadlineData.entries())
       .map(([name, data]) => ({
         name,
         projetos: data.count,
@@ -32,7 +32,6 @@ export function TechnologyStats({ works }: TechnologyStatsProps) {
         average: data.value / data.count
       }))
       .sort((a, b) => b.projetos - a.projetos)
-      .slice(0, 8)
   }, [works])
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -53,13 +52,13 @@ export function TechnologyStats({ works }: TechnologyStatsProps) {
   return (
     <div className="rounded-xl border bg-card shadow-sm p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-bold">Templates Envato Mais Usados</h3>
-        <p className="text-sm text-muted-foreground">Top 8 templates WordPress por quantidade de projetos</p>
+        <h3 className="text-lg font-bold">Projetos por Tipo de Prazo</h3>
+        <p className="text-sm text-muted-foreground">Distribuição entre prazos normais e reduzidos</p>
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={80} />
+          <XAxis dataKey="name" className="text-xs" />
           <YAxis className="text-xs" />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="projetos" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
