@@ -1,0 +1,207 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  
+  /* Cores customizadas JVX */
+  --jvx-blue-primary: #5A7AB7;
+  --jvx-blue-secondary: #63C5EF;
+  --jvx-blue-light: #95D6EB;
+  
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+  
+  /* Primary usando a paleta JVX */
+  --primary: 90 122 183; /* #5A7AB7 em RGB */
+  --primary-foreground: 255 255 255;
+  
+  --secondary: 149 214 235; /* #95D6EB em RGB */
+  --secondary-foreground: 0 0 0;
+  
+  --accent: 99 197 239; /* #63C5EF em RGB */
+  --accent-foreground: 0 0 0;
+  
+  --muted: oklch(0.967 0.003 264.542);
+  --muted-foreground: oklch(0.551 0.027 264.364);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  --ring: 90 122 183; /* #5A7AB7 */
+  
+  --chart-1: 90 122 183;
+  --chart-2: 99 197 239;
+  --chart-3: 149 214 235;
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+}
+
+.dark {
+  --background: oklch(0.13 0.028 261.692);
+  --foreground: oklch(0.985 0.002 247.839);
+  --card: oklch(0.21 0.034 264.665);
+  --card-foreground: oklch(0.985 0.002 247.839);
+  --popover: oklch(0.21 0.034 264.665);
+  --popover-foreground: oklch(0.985 0.002 247.839);
+  
+  /* Primary usando a paleta JVX no modo escuro */
+  --primary: 99 197 239; /* #63C5EF mais claro para dark mode */
+  --primary-foreground: 0 0 0;
+  
+  --secondary: 90 122 183; /* #5A7AB7 */
+  --secondary-foreground: 255 255 255;
+  
+  --accent: 149 214 235; /* #95D6EB */
+  --accent-foreground: 0 0 0;
+  
+  --muted: oklch(0.278 0.033 256.848);
+  --muted-foreground: oklch(0.707 0.022 261.325);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: 99 197 239;
+  
+  --chart-1: 99 197 239;
+  --chart-2: 149 214 235;
+  --chart-3: 90 122 183;
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Melhorar seleção de texto */
+  ::selection {
+    background-color: rgba(var(--primary), 0.3);
+    color: hsl(var(--foreground));
+  }
+  
+  /* Seleção em inputs */
+  input::selection,
+  textarea::selection {
+    background-color: rgba(var(--primary), 0.5);
+    color: hsl(var(--foreground));
+  }
+  
+  /* Scrollbar customizada */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary), 0.5);
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--primary), 0.7);
+  }
+  
+  /* Transições suaves */
+  * {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Focus visible melhorado */
+  *:focus-visible {
+    outline: 2px solid rgba(var(--primary), 1);
+    outline-offset: 2px;
+  }
+  
+  /* Garantir que texto seja sempre selecionável */
+  * {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+  
+  /* Exceções onde não queremos seleção */
+  button,
+  [role="button"],
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+}
+
+@layer utilities {
+  .bg-jvx-primary {
+    background-color: rgba(var(--primary), 1);
+  }
+  
+  .bg-jvx-secondary {
+    background-color: rgba(var(--secondary), 1);
+  }
+  
+  .bg-jvx-accent {
+    background-color: rgba(var(--accent), 1);
+  }
+  
+  .text-jvx-primary {
+    color: rgba(var(--primary), 1);
+  }
+  
+  .border-jvx-primary {
+    border-color: rgba(var(--primary), 1);
+  }
+}
