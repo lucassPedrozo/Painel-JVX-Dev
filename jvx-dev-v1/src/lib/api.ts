@@ -16,11 +16,13 @@ export interface Work {
   value: string | number
   domain: string
   site_type: string
+  template?: string
   delivery_date: number | string
   delivery_month: string
   delivery_year: number
   status: string
   developer_status: string
+  completed_at?: string | null
   payment_status: string
   observations?: string
 }

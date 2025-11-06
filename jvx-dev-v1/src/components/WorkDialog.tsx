@@ -29,6 +29,7 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
   const [value, setValue] = React.useState("")
   const [domain, setDomain] = React.useState("")
   const [siteType, setSiteType] = React.useState("Site Institucional")
+  const [template, setTemplate] = React.useState("")
   const [deliveryDate, setDeliveryDate] = React.useState("")
   const [status, setStatus] = React.useState("Não Entregue")
   const [paymentStatus, setPaymentStatus] = React.useState("Não Pago")
@@ -42,6 +43,7 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
     setValue("")
     setDomain("")
     setSiteType("Site Institucional")
+    setTemplate("")
     setDeliveryDate("")
     setStatus("Não Entregue")
     setPaymentStatus("Não Pago")
@@ -67,10 +69,12 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
         value: parseFloat(value) || 0,
         domain,
         site_type: siteType,
+        template: template || undefined,
         delivery_date: timestamp,
         delivery_month: month.charAt(0).toUpperCase() + month.slice(1),
         delivery_year: year,
         status,
+        developer_status: 'Em Andamento',
         payment_status: paymentStatus,
         observations
       })
@@ -80,8 +84,8 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
       resetForm()
       onSubmitSuccess()
     } catch (error) {
-      console.error("Erro ao adicionar trabalho:", error)
-      toast.error("Erro ao adicionar trabalho")
+      console.error("Erro ao adicionar projeto:", error)
+      toast.error("Erro ao adicionar projeto")
     } finally {
       setIsSubmitting(false)
     }
@@ -92,15 +96,15 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
       <DialogTrigger asChild>
         <Button>
           <IconPlus className="h-4 w-4 mr-2" />
-          Adicionar Trabalho
+          Adicionar Projeto
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Trabalho</DialogTitle>
+          <DialogTitle>Adicionar Novo Projeto</DialogTitle>
           <DialogDescription>
-            Preencha os dados do novo projeto ou site desenvolvido.
+            Preencha os dados do novo projeto de desenvolvimento.
           </DialogDescription>
         </DialogHeader>
 
@@ -168,6 +172,24 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </FormField>
+
+            <FormField label="Template (URL)">
+              <Input
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    const normalized = normalizeUrl(e.target.value)
+                    setTemplate(normalized)
+                  }
+                }}
+                placeholder="https://themeforest.net/item/..."
+                type="url"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                URL do template utilizado (ThemeForest, Envato, etc)
+              </p>
             </FormField>
 
             <FormField label="Data de Entrega" required>

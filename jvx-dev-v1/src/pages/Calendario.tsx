@@ -19,20 +19,18 @@ export function Calendario() {
     return Array.from(devs).sort()
   }, [works])
 
-  // Calcular status do prazo baseado na data de cadastro + 30 dias
+  // Calcular status do prazo baseado na data de entrega
   const getDeadlineStatus = (work: any) => {
-    const cadastroDate = new Date(work.date)
-    const deadline = new Date(cadastroDate)
-    deadline.setDate(deadline.getDate() + 30) // 30 dias após cadastro
-    
+    const deliveryDate = new Date(work.delivery_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    deadline.setHours(0, 0, 0, 0)
+    deliveryDate.setHours(0, 0, 0, 0)
     
-    const isPaid = work.paymentStatus === 'Pago'
-    const daysUntilDeadline = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const isPaid = work.payment_status === 'Pago'
+    const isCompleted = work.developer_status === 'Concluído'
+    const daysUntilDeadline = Math.ceil((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     
-    if (isPaid) {
+    if (isPaid && isCompleted) {
       return { status: 'completed', label: 'Concluído', color: 'bg-green-500', days: 0 }
     } else if (daysUntilDeadline < 0) {
       return { status: 'overdue', label: 'Atrasado', color: 'bg-red-500', days: Math.abs(daysUntilDeadline) }
@@ -78,7 +76,7 @@ export function Calendario() {
 
   const getWorksForDate = (date: Date) => {
     return filteredWorks.filter(work => {
-      const workDate = new Date(work.date)
+      const workDate = new Date(work.delivery_date)
       return workDate.toDateString() === date.toDateString()
     })
   }
@@ -263,9 +261,9 @@ export function Calendario() {
                               status.color,
                               "text-white"
                             )}
-                            title={`${work.typeWork} - ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}`}
+                            title={`${work.site_type} - ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}`}
                           >
-                            <div className="font-medium truncate">{work.typeWork}</div>
+                            <div className="font-medium truncate">{work.site_type}</div>
                             <div className="text-[10px] opacity-90 truncate">{work.developer}</div>
                           </div>
                         )
@@ -297,34 +295,33 @@ export function Calendario() {
             })
             .slice(0, 10)
             .map(({ work, status }) => {
-              const cadastroDate = new Date(work.date)
-              const deadline = new Date(cadastroDate)
-              deadline.setDate(deadline.getDate() + 30)
-
               return (
-                <div key={work.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className={cn("w-1 h-12 rounded-full", status.color)} />
+                <div key={work.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={cn("w-1 h-12 rounded-full flex-shrink-0", status.color)} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">{work.typeWork}</span>
-                        <Badge variant={status.status === 'completed' ? 'default' : 'destructive'}>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium truncate">{work.site_type}</span>
+                        <Badge variant={status.status === 'completed' ? 'default' : 'destructive'} className="flex-shrink-0">
                           {status.label}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {work.developer} • Cadastrado em {formatDate(work.date)}
+                      <p className="text-sm text-muted-foreground truncate">
+                        {work.developer} • Entrega: {formatDate(work.delivery_date)}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {work.domain}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">{formatCurrency(parseValue(work.value))}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <p className="font-bold whitespace-nowrap">{formatCurrency(parseValue(work.value))}</p>
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
                       {status.status === 'completed' 
                         ? 'Concluído' 
                         : status.status === 'overdue'
-                        ? `${status.days} dias atrasado`
-                        : `${status.days} dias restantes`
+                        ? `${status.days}d atrasado`
+                        : `${status.days}d restantes`
                       }
                     </p>
                   </div>
@@ -356,7 +353,7 @@ export function Calendario() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          * Prazo padrão: 30 dias após cadastro do projeto
+          * Prazos baseados na data de entrega cadastrada para cada projeto
         </p>
       </div>
     </div>

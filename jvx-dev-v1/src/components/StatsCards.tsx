@@ -15,7 +15,7 @@ export function StatsCards({ totalSites, pagamentosPendentes }: StatsCardsProps)
           <Card className="transition-shadow duration-200 hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div className="space-y-1">
-                <CardTitle className="text-base font-medium">Sites Gerenciados</CardTitle>
+                <CardTitle className="text-base font-medium">Projetos Gerenciados</CardTitle>
                 <CardDescription>Total de projetos cadastrados</CardDescription>
               </div>
               <div className="rounded-full bg-primary/10 p-3">
@@ -41,7 +41,7 @@ export function StatsCards({ totalSites, pagamentosPendentes }: StatsCardsProps)
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div className="space-y-1">
                 <CardTitle className="text-base font-medium">Pagamentos Pendentes</CardTitle>
-                <CardDescription>Trabalhos aguardando pagamento</CardDescription>
+                <CardDescription>Projetos aguardando pagamento</CardDescription>
               </div>
               <div className="rounded-full bg-orange-500/10 p-3">
                 <CreditCard className="h-5 w-5 text-orange-500" />

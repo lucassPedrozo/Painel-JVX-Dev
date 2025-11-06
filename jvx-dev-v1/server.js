@@ -177,11 +177,11 @@ app.get("/works", authenticateToken, asyncHandler(async (req, res) => {
 
 // POST novo work (apenas master)
 app.post("/works", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
-  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
   
-  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   
-  const [result] = await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status || 'Em Andamento', payment_status, observations]);
+  const [result] = await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, developer_status || 'Em Andamento', payment_status, observations]);
   
   console.log(`✓ Projeto criado: ID ${result.insertId} - ${domain}`);
   
@@ -191,7 +191,7 @@ app.post("/works", authenticateToken, requireMaster, asyncHandler(async (req, re
 // PUT para atualizar work (apenas master)
 app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
 
   // Verificar se o registro existe
   const [existing] = await pool.execute("SELECT * FROM works WHERE id = ?", [id]);
@@ -201,11 +201,12 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
   }
 
   // Atualizar o registro
-  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ? WHERE id = ?";
+  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, template = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ? WHERE id = ?";
   
-  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, id]);
+  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, id]);
   
   console.log(`✓ Projeto atualizado: ID ${id} - ${domain}`);
+  console.log(`  Template: ${template || 'NULL'}`);
   
   res.json({
     success: true,
@@ -249,14 +250,22 @@ app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (re
     return res.status(400).json({ error: "Status inválido. Use 'Em Andamento' ou 'Concluído'" });
   }
   
-  await pool.execute("UPDATE works SET developer_status = ? WHERE id = ?", [developer_status, id]);
+  // Se está marcando como concluído, salvar a data/hora atual
+  // Se está voltando para "Em Andamento", limpar a data
+  const completed_at = developer_status === 'Concluído' ? new Date() : null;
+  
+  await pool.execute(
+    "UPDATE works SET developer_status = ?, completed_at = ? WHERE id = ?", 
+    [developer_status, completed_at, id]
+  );
   
   console.log(`✓ Status do desenvolvedor atualizado: ID ${id} - ${developer_status} por ${req.user.username}`);
   
   res.json({ 
     success: true, 
     message: `Projeto marcado como ${developer_status.toLowerCase()}`,
-    developer_status 
+    developer_status,
+    completed_at 
   });
 }));
 

@@ -17,7 +17,7 @@ const routes = [
   },
   {
     href: "/sites",
-    label: "Sites",
+    label: "Projetos",
     icon: Globe
   },
   {
@@ -78,7 +78,7 @@ export function Header() {
                   key={route.href}
                   to={route.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 cursor-pointer",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"

@@ -23,16 +23,25 @@ export function Sites() {
   const { works, loading, reload } = useWorks()
   const [editingWork, setEditingWork] = React.useState<Work | null>(null)
   const [open, setOpen] = React.useState(false)
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined)
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined)
+  
+  // Definir data padrão: primeiro e último dia do mês atual
+  const getDefaultDates = () => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return { firstDay, lastDay }
+  }
+  
+  const { firstDay, lastDay } = getDefaultDates()
+  const [startDate, setStartDate] = React.useState<Date | undefined>(firstDay)
+  const [endDate, setEndDate] = React.useState<Date | undefined>(lastDay)
   const [searchTerm, setSearchTerm] = React.useState("")
   const [sortField, setSortField] = React.useState<"value" | "date" | null>(null)
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc")
   const [filterType, setFilterType] = React.useState<string>("all")
   const [filterPayment, setFilterPayment] = React.useState<string>("all")
   const [filterDeveloper, setFilterDeveloper] = React.useState<string>("all")
-  const [filterTemplate, setFilterTemplate] = React.useState<string>("all")
-  const [filterObservations, setFilterObservations] = React.useState<string>("all")
+  const [filterStatus, setFilterStatus] = React.useState<string>("all")
 
   const stats = React.useMemo(() => ({
     totalSites: works.length,
@@ -57,11 +66,6 @@ export function Sites() {
     return Array.from(devs).sort()
   }, [works])
 
-  const siteTypes = React.useMemo(() => {
-    const types = new Set(works.map(w => w.site_type).filter(Boolean) as string[])
-    return Array.from(types).sort()
-  }, [works])
-
   const filteredWorks = React.useMemo(() => {
     let filtered = works.filter((work) => {
       const term = searchTerm.toLowerCase()
@@ -72,7 +76,7 @@ export function Sites() {
         valueFormatted.includes(term.replace(/[R$\s,.]/g, "")) ||
         (work.domain || "").toLowerCase().includes(term) ||
         (work.developer || "").toLowerCase().includes(term) ||
-        (work.status || "").toLowerCase().includes(term) ||
+        (work.developer_status || "").toLowerCase().includes(term) ||
         (work.observations || "").toLowerCase().includes(term)
 
       const workDate = new Date(work.delivery_date).getTime()
@@ -82,14 +86,10 @@ export function Sites() {
       const matchesType = filterType === "all" || work.site_type === filterType
       const matchesPayment = filterPayment === "all" || work.payment_status === filterPayment
       const matchesDeveloper = filterDeveloper === "all" || work.developer === filterDeveloper
-      const matchesTemplate = filterTemplate === "all" || work.site_type === filterTemplate
-      const matchesObservations =
-        filterObservations === "all" ||
-        (filterObservations === "with" && work.observations && work.observations.trim() !== "") ||
-        (filterObservations === "without" && (!work.observations || work.observations.trim() === ""))
+      const matchesStatus = filterStatus === "all" || work.developer_status === filterStatus
 
       return matchesSearch && matchesStart && matchesEnd && matchesType && matchesPayment &&
-        matchesDeveloper && matchesTemplate && matchesObservations
+        matchesDeveloper && matchesStatus
     })
 
     if (sortField) {
@@ -106,7 +106,7 @@ export function Sites() {
     }
 
     return filtered
-  }, [works, searchTerm, startDate, endDate, sortField, sortOrder, filterType, filterPayment, filterDeveloper, filterTemplate, filterObservations])
+  }, [works, searchTerm, startDate, endDate, sortField, sortOrder, filterType, filterPayment, filterDeveloper, filterStatus])
 
   const handleSort = (field: "value" | "date") => {
     if (sortField === field) {
@@ -149,8 +149,9 @@ export function Sites() {
   }
 
   const handleClearDates = () => {
-    setStartDate(undefined)
-    setEndDate(undefined)
+    const { firstDay, lastDay } = getDefaultDates()
+    setStartDate(firstDay)
+    setEndDate(lastDay)
   }
 
   const handleClearFilters = () => {
@@ -160,8 +161,7 @@ export function Sites() {
     setFilterType("all")
     setFilterPayment("all")
     setFilterDeveloper("all")
-    setFilterTemplate("all")
-    setFilterObservations("all")
+    setFilterStatus("all")
   }
 
   return (
@@ -169,8 +169,8 @@ export function Sites() {
       {/* Header da Página */}
       <div className="flex-shrink-0">
         <PageHeader
-          title="Sites Desenvolvidos"
-          description="Gerencie todos os seus projetos e sites desenvolvidos. Visualize, edite e acompanhe o status de cada trabalho."
+          title="Projetos"
+          description="Gerencie todos os seus projetos de desenvolvimento. Visualize, edite e acompanhe o status de cada projeto."
         />
       </div>
 
@@ -193,7 +193,7 @@ export function Sites() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight">Lista de Trabalhos</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Lista de Projetos</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Gerencie e filtre seus projetos cadastrados
                 </p>
@@ -272,7 +272,7 @@ export function Sites() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium whitespace-nowrap">
-                  {filteredWorks.length} de {works.length} trabalho(s)
+                  {filteredWorks.length} de {works.length} projeto(s)
                 </div>
                 <Button
                   variant="outline"
@@ -296,7 +296,7 @@ export function Sites() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    generatePDF(filteredWorks, 'Relatório de Sites - JVX')
+                    generatePDF(filteredWorks, 'Relatório de Projetos - JVX')
                     toast.success('PDF gerado com sucesso!')
                   }}
                   title="Exportar para PDF"
@@ -310,61 +310,49 @@ export function Sites() {
             {/* Linha 2: Filtros Principais */}
             <div className="flex flex-wrap gap-3">
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo: Todos" />
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tipo de Projeto" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tipo: Todos</SelectItem>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
                   {SITE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>Tipo: {type}</SelectItem>
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={filterDeveloper} onValueChange={setFilterDeveloper}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Dev: Todos" />
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Desenvolvedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Dev: Todos</SelectItem>
+                  <SelectItem value="all">Todos os Desenvolvedores</SelectItem>
                   {developers.map((dev) => (
-                    <SelectItem key={dev} value={dev}>Dev: {dev}</SelectItem>
+                    <SelectItem key={dev} value={dev}>{dev}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Status do Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                  <SelectItem value="Concluído">Concluído</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={filterPayment} onValueChange={setFilterPayment}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Pagamento: Todos" />
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Status de Pagamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Pagamento: Todos</SelectItem>
+                  <SelectItem value="all">Todos os Pagamentos</SelectItem>
                   {PAYMENT_STATUS.map((status) => (
-                    <SelectItem key={status} value={status}>Pagamento: {status}</SelectItem>
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterTemplate} onValueChange={setFilterTemplate}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo Site: Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tipo Site: Todos</SelectItem>
-                  {siteTypes.map((type) => (
-                    <SelectItem key={type} value={type}>Tipo: {type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterObservations} onValueChange={setFilterObservations}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Observações: Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Observações: Todas</SelectItem>
-                  <SelectItem value="with">Observações: Com</SelectItem>
-                  <SelectItem value="without">Observações: Sem</SelectItem>
                 </SelectContent>
               </Select>
             </div>

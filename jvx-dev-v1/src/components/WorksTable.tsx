@@ -13,6 +13,7 @@ import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 import { QuickActions } from './QuickActions'
 import { DeveloperStatusButton } from './DeveloperStatusButton'
+import { StatusBadge } from './StatusBadge'
 
 interface WorksTableProps {
   works: Work[]
@@ -45,77 +46,70 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
 
   return (
     <TooltipProvider>
-      <div className="rounded-lg border bg-card overflow-hidden flex flex-col">
-        {/* Header fixo */}
-        <div className="overflow-x-auto border-b">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50">
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[50px]">
-                  #
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[110px]">
-                  Tipo
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[140px]">
-                  Desenvolvedor
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[120px]">
-                  Template
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[130px]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 -ml-3 hover:bg-muted/80 font-semibold text-xs uppercase tracking-wider"
-                    onClick={() => onSort("value")}
-                  >
-                    Valor
-                    {getSortIcon("value")}
-                  </Button>
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[120px]">
-                  Status Dev
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[130px]">
-                  Pagamento
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[120px]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 -ml-3 hover:bg-muted/80 font-semibold text-xs uppercase tracking-wider"
-                    onClick={() => onSort("date")}
-                  >
-                    Data Cadastro
-                    {getSortIcon("date")}
-                  </Button>
-                </th>
-                <th className="text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                  URL do Projeto
-                </th>
-                <th className="text-center px-3 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[60px]">
-                  Obs.
-                </th>
-                <th className="text-right px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[100px]">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-          </table>
-        </div>
-
-        {/* Body com scroll */}
-        <ScrollArea className="h-[calc(100vh-28rem)]">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <div className="relative">
+          <div className="overflow-auto max-h-[calc(100vh-28rem)]">
+            <table className="w-full text-sm border-collapse">
+              <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b shadow-sm">
+                <tr>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[40px] w-[40px]">
+                    #
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[130px] w-[130px]">
+                    Tipo
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[120px] w-[120px]">
+                    Desenvolvedor
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[100px] w-[100px]">
+                    Template
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[110px] w-[110px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 -ml-2 hover:bg-muted/80 font-semibold text-xs uppercase tracking-wider px-2"
+                      onClick={() => onSort("value")}
+                    >
+                      Valor
+                      {getSortIcon("value")}
+                    </Button>
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[140px] w-[140px]">
+                    Status
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[120px] w-[120px]">
+                    Pagamento
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[100px] w-[100px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 -ml-2 hover:bg-muted/80 font-semibold text-xs uppercase tracking-wider px-2"
+                      onClick={() => onSort("date")}
+                    >
+                      Data
+                      {getSortIcon("date")}
+                    </Button>
+                  </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[200px]">
+                    URL
+                  </th>
+                  <th className="text-center px-2 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[50px] w-[50px]">
+                    Obs
+                  </th>
+                  <th className="text-right px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[80px] w-[80px] sticky right-0 bg-muted/95 backdrop-blur-sm">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td colSpan={11} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                        <span>Carregando trabalhos...</span>
+                        <span>Carregando projetos...</span>
                       </div>
                     </td>
                   </tr>
@@ -124,7 +118,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                     <td colSpan={11} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-4xl">📋</span>
-                        <span>Nenhum trabalho encontrado</span>
+                        <span>Nenhum projeto encontrado</span>
                       </div>
                     </td>
                   </tr>
@@ -134,110 +128,115 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                     const isPaid = work.payment_status === "Pago"
                     const globalIndex = startIndex + index
                     
-                    // Verificar se observations contém URL (template)
-                    const isTemplateUrl = work.observations && (
-                      work.observations.includes('http') || 
-                      work.observations.includes('envato') ||
-                      work.observations.includes('themeforest')
-                    )
-                    
                     return (
                       <tr 
                         key={`${work.id}-${index}`} 
-                        className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150"
+                        className="border-b last:border-0 hover:bg-muted/30 transition-colors duration-150"
                       >
-                        <td className="px-4 py-4 w-[50px]">
+                        <td className="px-3 py-3 min-w-[40px] w-[40px]">
                           <span className="text-xs font-medium text-muted-foreground">
                             {globalIndex + 1}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[110px]">
-                          <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-md bg-primary/10 text-primary whitespace-nowrap">
-                            {work.site_type}
-                          </span>
+                        <td className="px-3 py-3 min-w-[130px] w-[130px]">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-primary/10 text-primary cursor-default truncate max-w-full">
+                                {work.site_type}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{work.site_type}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </td>
-                        <td className="px-4 py-4 w-[140px]">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-foreground">
-                              {work.developer || "-"}
-                            </span>
-                          </div>
+                        <td className="px-3 py-3 min-w-[120px] w-[120px]">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm font-medium text-foreground truncate block cursor-default">
+                                {work.developer || "-"}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{work.developer || "Sem desenvolvedor"}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </td>
-                        <td className="px-4 py-4 w-[120px]">
-                          {isTemplateUrl ? (
+                        <td className="px-3 py-3 min-w-[100px] w-[100px]">
+                          {work.template ? (
                             <a 
-                              href={work.observations} 
+                              href={work.template} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 whitespace-nowrap hover:bg-blue-500/20 transition-colors"
-                              title="Ver template"
+                              className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                              title={work.template}
                             >
                               Ver Template
                             </a>
                           ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
+                            <span className="text-muted-foreground text-xs">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-4 w-[130px]">
-                          <span className="text-sm font-bold text-foreground">
+                        <td className="px-3 py-3 min-w-[110px] w-[110px]">
+                          <span className="text-sm font-bold text-foreground whitespace-nowrap">
                             {formatCurrency(parseValue(work.value))}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[120px]">
+                        <td className="px-3 py-3 min-w-[140px] w-[140px]">
                           <div className="flex flex-col gap-1">
-                            <Badge 
-                              variant={work.developer_status === 'Concluído' ? "default" : "secondary"}
-                              className="font-medium whitespace-nowrap text-xs"
-                            >
-                              {work.developer_status}
-                            </Badge>
+                            <StatusBadge work={work} />
                             <DeveloperStatusButton work={work} onUpdate={onDelete} />
                           </div>
                         </td>
-                        <td className="px-4 py-4 w-[130px]">
+                        <td className="px-3 py-3 min-w-[120px] w-[120px]">
                           <Badge 
                             variant={isPaid ? "default" : "destructive"}
-                            className="font-medium whitespace-nowrap"
+                            className="font-medium text-xs"
                           >
                             {work.payment_status}
                           </Badge>
                         </td>
-                        <td className="px-4 py-4 w-[120px]">
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        <td className="px-3 py-3 min-w-[100px] w-[100px]">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatDate(work.delivery_date)}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
-                          <a 
-                            href={work.domain.startsWith('http') ? work.domain : `https://${work.domain}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-primary hover:text-primary/80 hover:underline inline-flex items-center gap-1.5 text-sm max-w-[300px] truncate"
-                            title={work.domain}
-                          >
-                            <span className="truncate">{work.domain}</span>
-                            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
-                          </a>
+                        <td className="px-3 py-3 min-w-[200px]">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a 
+                                href={work.domain.startsWith('http') ? work.domain : `https://${work.domain}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-primary hover:text-primary/80 hover:underline inline-flex items-center gap-1 text-xs cursor-pointer transition-colors max-w-full"
+                              >
+                                <span className="truncate">{work.domain}</span>
+                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">{work.domain}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </td>
-                        <td className="px-3 py-4 text-center w-[60px]">
-                          {hasObservations && !isTemplateUrl ? (
+                        <td className="px-2 py-3 text-center min-w-[50px] w-[50px]">
+                          {hasObservations ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="inline-flex items-center justify-center cursor-pointer hover:bg-muted/50 rounded p-1 transition-colors">
-                                  <FileText className="h-4 w-4 text-blue-500" />
+                                  <FileText className="h-3.5 w-3.5 text-blue-500" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs" side="left">
-                                <p className="text-sm whitespace-pre-wrap">{work.observations}</p>
+                                <p className="text-xs whitespace-pre-wrap">{work.observations}</p>
                               </TooltipContent>
                             </Tooltip>
                           ) : (
                             <span className="text-muted-foreground/50 text-xs">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-4 w-[100px]">
-                          <div className="flex justify-end gap-2 items-center">
-                            {/* Menu de Ações Rápidas */}
+                        <td className="px-3 py-3 min-w-[80px] w-[80px] sticky right-0 bg-background">
+                          <div className="flex justify-end items-center">
                             <QuickActions
                               work={work}
                               onEdit={onEdit}
@@ -253,7 +252,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
               </tbody>
             </table>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Footer fixo com paginação */}
         <div className="border-t bg-muted/30">
@@ -262,7 +261,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
               {/* Resumo */}
               <div className="flex items-center gap-6 text-sm">
                 <span className="font-semibold">
-                  Total: {works.length} {works.length === 1 ? 'trabalho' : 'trabalhos'}
+                  Total: {works.length} {works.length === 1 ? 'projeto' : 'projetos'}
                 </span>
                 <span className="text-muted-foreground">
                   Receita: <span className="font-bold text-foreground">{formatCurrency(works.reduce((acc, work) => acc + parseValue(work.value), 0))}</span>
@@ -321,7 +320,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                       setPageSize(Number(e.target.value))
                       setCurrentPage(1)
                     }}
-                    className="h-9 rounded-md border bg-background px-3 text-sm"
+                    className="h-9 rounded-md border bg-background px-3 text-sm cursor-pointer hover:bg-accent transition-colors"
                   >
                     <option value={10}>10 por página</option>
                     <option value={25}>25 por página</option>

@@ -13,11 +13,11 @@ export function DeleteWorkDialog({ work, onDelete }: DeleteWorkDialogProps) {
   const handleDelete = async () => {
     try {
       await api.deleteWork(work.id!)
-      toast.success("Trabalho deletado com sucesso!")
+      toast.success("Projeto deletado com sucesso!")
       if (onDelete) onDelete()
     } catch (error) {
-      console.error("Erro ao deletar trabalho:", error)
-      toast.error("Erro ao deletar trabalho")
+      console.error("Erro ao deletar projeto:", error)
+      toast.error("Erro ao deletar projeto")
     }
   }
 
@@ -32,7 +32,7 @@ export function DeleteWorkDialog({ work, onDelete }: DeleteWorkDialogProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta ação não pode ser desfeita. O trabalho será permanentemente removido do sistema.
+            Esta ação não pode ser desfeita. O projeto será permanentemente removido do sistema.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

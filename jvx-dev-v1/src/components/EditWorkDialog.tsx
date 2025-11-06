@@ -19,25 +19,29 @@ interface EditWorkDialogProps {
 }
 
 export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditWorkDialogProps) {
-  const [typeWork, setTypeWork] = React.useState(work.typeWork)
-  const [paymentStatus, setPaymentStatus] = React.useState(work.paymentStatus)
-  const [value, setValue] = React.useState(String(work.value))
-  const [url, setUrl] = React.useState(work.url)
-  const [date, setDate] = React.useState(new Date(work.date).toISOString().split('T')[0])
   const [developer, setDeveloper] = React.useState(work.developer || "")
+  const [deadlineType, setDeadlineType] = React.useState(work.deadline_type || "Normal")
+  const [value, setValue] = React.useState(String(work.value))
+  const [domain, setDomain] = React.useState(work.domain || "")
+  const [siteType, setSiteType] = React.useState(work.site_type || "Site Institucional")
   const [template, setTemplate] = React.useState(work.template || "")
+  const [deliveryDate, setDeliveryDate] = React.useState(new Date(work.delivery_date).toISOString().split('T')[0])
+  const [status, setStatus] = React.useState(work.status || "Não Entregue")
+  const [paymentStatus, setPaymentStatus] = React.useState(work.payment_status || "Não Pago")
   const [observations, setObservations] = React.useState(work.observations || "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   React.useEffect(() => {
     if (isOpen) {
-      setTypeWork(work.typeWork)
-      setPaymentStatus(work.paymentStatus)
-      setValue(String(work.value))
-      setUrl(work.url)
-      setDate(new Date(work.date).toISOString().split('T')[0])
       setDeveloper(work.developer || "")
+      setDeadlineType(work.deadline_type || "Normal")
+      setValue(String(work.value))
+      setDomain(work.domain || "")
+      setSiteType(work.site_type || "Site Institucional")
       setTemplate(work.template || "")
+      setDeliveryDate(new Date(work.delivery_date).toISOString().split('T')[0])
+      setStatus(work.status || "Não Entregue")
+      setPaymentStatus(work.payment_status || "Não Pago")
       setObservations(work.observations || "")
     }
   }, [isOpen, work])
@@ -47,23 +51,32 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
     setIsSubmitting(true)
 
     try {
+      const dateObj = new Date(deliveryDate)
+      const deliveryMonth = dateObj.toLocaleDateString('pt-BR', { month: 'long' })
+      const deliveryYear = dateObj.getFullYear()
+
       await api.updateWork(work.id!, {
-        typeWork,
-        paymentStatus,
-        value,
-        url,
-        date,
         developer,
-        template,
+        deadline_type: deadlineType,
+        value,
+        domain: normalizeUrl(domain),
+        site_type: siteType,
+        template: template.trim() || null,
+        delivery_date: dateObj.getTime(),
+        delivery_month: deliveryMonth.charAt(0).toUpperCase() + deliveryMonth.slice(1),
+        delivery_year: deliveryYear,
+        status,
+        developer_status: work.developer_status || "Em Andamento",
+        payment_status: paymentStatus,
         observations
       })
 
-      toast.success("Trabalho atualizado com sucesso!")
+      toast.success("Projeto atualizado com sucesso!")
       onClose()
       onSubmitSuccess()
     } catch (error) {
-      console.error("Erro ao atualizar trabalho:", error)
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar trabalho")
+      console.error("Erro ao atualizar projeto:", error)
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar projeto")
     } finally {
       setIsSubmitting(false)
     }
@@ -73,7 +86,7 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Editar Trabalho</DialogTitle>
+          <DialogTitle>Editar Projeto</DialogTitle>
           <DialogDescription>
             Atualize as informações do projeto selecionado.
           </DialogDescription>
@@ -81,105 +94,122 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
 
         <ScrollArea className="max-h-[60vh] pr-4">
           <form onSubmit={handleSubmit} className="space-y-4" id="edit-work-form">
-          <FormField label="Tipo de Trabalho" required>
-            <Select value={typeWork} onValueChange={setTypeWork} required>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WORK_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
+            <FormField label="Desenvolvedor" required>
+              <Input
+                value={developer}
+                onChange={(e) => setDeveloper(e.target.value)}
+                placeholder="Nome do desenvolvedor"
+                required
+              />
+            </FormField>
 
-          <FormField label="Status do Pagamento" required>
-            <Select value={paymentStatus} onValueChange={setPaymentStatus} required>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_STATES.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
+            <FormField label="Tipo de Prazo" required>
+              <Select value={deadlineType} onValueChange={setDeadlineType} required>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEADLINE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
 
-          <FormField label="Valor" required>
-            <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="0.00"
-              type="number"
-              step="0.01"
-              min="0"
-              required
-            />
-          </FormField>
+            <FormField label="Valor (R$)" required>
+              <Input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="R$ 0,00"
+                required
+              />
+            </FormField>
 
-          <FormField label="URL do Site" required>
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onBlur={(e) => {
-                const normalized = normalizeUrl(e.target.value)
-                setUrl(normalized)
-              }}
-              placeholder="https://exemplo.com"
-              type="url"
-              required
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              URL será automaticamente formatada para HTTPS
-            </p>
-          </FormField>
+            <FormField label="Domínio/URL do Projeto" required>
+              <Input
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="exemplo.com.br"
+                required
+              />
+            </FormField>
 
-          <FormField label="Desenvolvedor" required>
-            <Input
-              value={developer}
-              onChange={(e) => setDeveloper(e.target.value)}
-              placeholder="Nome do desenvolvedor"
-              required
-            />
-          </FormField>
+            <FormField label="Tipo de Projeto" required>
+              <Select value={siteType} onValueChange={setSiteType} required>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SITE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
 
-          <FormField label="Data de Conclusão" required>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </FormField>
+            <FormField label="Template (URL)">
+              <Input
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    const normalized = normalizeUrl(e.target.value)
+                    setTemplate(normalized)
+                  }
+                }}
+                placeholder="https://themeforest.net/item/..."
+                type="url"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                URL do template utilizado (ThemeForest, Envato, etc)
+              </p>
+            </FormField>
 
-          <FormField label="Template Envato (WordPress)">
-            <Input
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
-              onBlur={(e) => {
-                const normalized = normalizeUrl(e.target.value)
-                setTemplate(normalized)
-              }}
-              placeholder="https://themeforest.net/item/..."
-              type="url"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              URL do template no Envato Market (ThemeForest)
-            </p>
-          </FormField>
+            <FormField label="Data de Entrega" required>
+              <Input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                required
+              />
+            </FormField>
 
-          <FormField label="Observações">
-            <Textarea
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Adicione observações sobre o projeto..."
-              rows={3}
-              className="resize-none mb-4"
-            />
-          </FormField>
-        </form>
+            <FormField label="Status de Entrega" required>
+              <Select value={status} onValueChange={setStatus} required>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DELIVERY_STATUS.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label="Status de Pagamento" required>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus} required>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_STATUS.map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label="Observações">
+              <Textarea
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Adicione observações sobre o projeto..."
+                rows={3}
+                className="resize-none mb-4"
+              />
+            </FormField>
+          </form>
         </ScrollArea>
 
         <DialogFooter className="mt-4">
