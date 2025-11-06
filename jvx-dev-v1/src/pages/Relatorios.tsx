@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Download, FileText, Calendar, TrendingUp, Users, Package, DollarSign, Filter, Eye } from 'lucide-react'
+import { Download, FileText, Filter, TrendingUp, DollarSign, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -9,92 +9,232 @@ import { useWorks } from '@/contexts/WorksContext'
 import { SITE_TYPES, PAYMENT_STATUS } from '@/lib/constants'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
-import { generatePDF } from '@/lib/pdf-export'
-import { ReportPreview } from '@/components/ReportPreview'
-import { CustomReportPreview } from '@/components/CustomReportPreview'
 
-export function Relatorios() {
+function Relatorios() {
   const { works } = useWorks()
   const [startDate, setStartDate] = React.useState('')
   const [endDate, setEndDate] = React.useState('')
   const [filterType, setFilterType] = React.useState('all')
   const [filterPayment, setFilterPayment] = React.useState('all')
   const [filterDeveloper, setFilterDeveloper] = React.useState('all')
-  const [previewReport, setPreviewReport] = React.useState<{ 
-    id: string
-    title: string
-    action: () => void
-    getData: () => any[]
-  } | null>(null)
 
-  // Função para obter colunas baseadas no tipo de relatório
-  const getColumnsForReport = (reportId: string) => {
-    switch (reportId) {
-      case 'productivity':
-        return [
-          { key: 'typeWork', label: 'Desenvolvedor' },
-          { key: 'developer', label: 'Concluídos/Total' },
-          { key: 'url', label: 'Taxa de Conclusão' },
-          { key: 'value', label: 'Receita Total', format: (v: number) => formatCurrency(v) },
-          { key: 'template', label: 'Ticket Médio' }
-        ]
-      case 'financial':
-        return [
-          { key: 'typeWork', label: 'Métrica' },
-          { key: 'url', label: 'Valor' }
-        ]
-      case 'monthly':
-        return [
-          { key: 'typeWork', label: 'Mês' },
-          { key: 'template', label: 'Projetos' },
-          { key: 'developer', label: 'Concluídos/Total' },
-          { key: 'value', label: 'Receita', format: (v: number) => formatCurrency(v) },
-          { key: 'url', label: 'Ticket Médio' }
-        ]
-      case 'type':
-        return [
-          { key: 'typeWork', label: 'Tipo' },
-          { key: 'developer', label: 'Quantidade' },
-          { key: 'value', label: 'Receita', format: (v: number) => formatCurrency(v) },
-          { key: 'url', label: 'Ticket Médio' }
-        ]
-      case 'template':
-        return [
-          { key: 'typeWork', label: 'Template' },
-          { key: 'developer', label: 'Usos' },
-          { key: 'url', label: 'Percentual' },
-          { key: 'value', label: 'Receita', format: (v: number) => formatCurrency(v) },
-          { key: 'template', label: 'Ticket Médio' }
-        ]
-      default:
-        return [
-          { key: 'typeWork', label: 'Tipo' },
-          { key: 'developer', label: 'Desenvolvedor' },
-          { key: 'value', label: 'Valor', format: (v: number) => formatCurrency(v) },
-          { key: 'paymentStatus', label: 'Status' }
-        ]
-    }
-  }
-
+  // Lista de desenvolvedores únicos
   const developers = React.useMemo(() => {
     const devs = new Set(works.map(w => w.developer).filter(Boolean) as string[])
     return Array.from(devs).sort()
   }, [works])
 
+  // Filtrar projetos
   const filteredWorks = React.useMemo(() => {
     return works.filter(work => {
-      const workDate = new Date(work.date)
+      const workDate = new Date(work.delivery_date)
       const start = startDate ? new Date(startDate) : null
       const end = endDate ? new Date(endDate) : null
 
       const matchesDate = (!start || workDate >= start) && (!end || workDate <= end)
-      const matchesType = filterType === 'all' || work.typeWork === filterType
-      const matchesPayment = filterPayment === 'all' || work.paymentStatus === filterPayment
+      const matchesType = filterType === 'all' || work.site_type === filterType
+      const matchesPayment = filterPayment === 'all' || work.payment_status === filterPayment
       const matchesDev = filterDeveloper === 'all' || work.developer === filterDeveloper
 
       return matchesDate && matchesType && matchesPayment && matchesDev
     })
   }, [works, startDate, endDate, filterType, filterPayment, filterDeveloper])
+
+  // ============================================
+  // CÁLCULOS FINANCEIROS PRECISOS
+  // ============================================
+
+  const financialMetrics = React.useMemo(() => {
+    const totalProjects = filteredWorks.length
+    const completedProjects = filteredWorks.filter(w => w.status === 'Entregue').length
+    const pendingProjects = totalProjects - completedProjects
+    
+    const paidProjects = filteredWorks.filter(w => w.payment_status === 'Pago').length
+    const unpaidProjects = totalProjects - paidProjects
+
+    // Receita total (soma de TODOS os projetos)
+    const totalRevenue = filteredWorks.reduce((sum, w) => sum + parseValue(w.value), 0)
+    
+    // Receita recebida (apenas projetos PAGOS)
+    const paidRevenue = filteredWorks
+      .filter(w => w.payment_status === 'Pago')
+      .reduce((sum, w) => sum + parseValue(w.value), 0)
+    
+    // Receita pendente (projetos NÃO PAGOS)
+    const pendingRevenue = filteredWorks
+      .filter(w => w.payment_status !== 'Pago')
+      .reduce((sum, w) => sum + parseValue(w.value), 0)
+
+    // Ticket médio
+    const averageTicket = totalProjects > 0 ? totalRevenue / totalProjects : 0
+
+    // Taxa de conclusão
+    const completionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0
+
+    // Taxa de pagamento
+    const paymentRate = totalProjects > 0 ? (paidProjects / totalProjects) * 100 : 0
+
+    return {
+      totalProjects,
+      completedProjects,
+      pendingProjects,
+      paidProjects,
+      unpaidProjects,
+      totalRevenue,
+      paidRevenue,
+      pendingRevenue,
+      averageTicket,
+      completionRate,
+      paymentRate
+    }
+  }, [filteredWorks])
+
+  // ============================================
+  // ANÁLISE POR DESENVOLVEDOR
+  // ============================================
+
+  const developerStats = React.useMemo(() => {
+    const stats = new Map<string, {
+      total: number
+      completed: number
+      paid: number
+      totalRevenue: number
+      paidRevenue: number
+      pendingRevenue: number
+    }>()
+
+    filteredWorks.forEach(work => {
+      const dev = work.developer || 'Não atribuído'
+      if (!stats.has(dev)) {
+        stats.set(dev, {
+          total: 0,
+          completed: 0,
+          paid: 0,
+          totalRevenue: 0,
+          paidRevenue: 0,
+          pendingRevenue: 0
+        })
+      }
+
+      const devStats = stats.get(dev)!
+      const value = parseValue(work.value)
+
+      devStats.total += 1
+      devStats.totalRevenue += value
+
+      if (work.status === 'Entregue') {
+        devStats.completed += 1
+      }
+
+      if (work.payment_status === 'Pago') {
+        devStats.paid += 1
+        devStats.paidRevenue += value
+      } else {
+        devStats.pendingRevenue += value
+      }
+    })
+
+    return Array.from(stats.entries())
+      .map(([developer, data]) => ({
+        developer,
+        ...data,
+        averageTicket: data.total > 0 ? data.totalRevenue / data.total : 0,
+        completionRate: data.total > 0 ? (data.completed / data.total) * 100 : 0,
+        paymentRate: data.total > 0 ? (data.paid / data.total) * 100 : 0
+      }))
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+  }, [filteredWorks])
+
+  // ============================================
+  // ANÁLISE POR TIPO DE PROJETO
+  // ============================================
+
+  const typeStats = React.useMemo(() => {
+    const stats = new Map<string, {
+      count: number
+      revenue: number
+      paid: number
+      paidRevenue: number
+    }>()
+
+    filteredWorks.forEach(work => {
+      const type = work.site_type
+      if (!stats.has(type)) {
+        stats.set(type, { count: 0, revenue: 0, paid: 0, paidRevenue: 0 })
+      }
+
+      const typeData = stats.get(type)!
+      const value = parseValue(work.value)
+
+      typeData.count += 1
+      typeData.revenue += value
+
+      if (work.payment_status === 'Pago') {
+        typeData.paid += 1
+        typeData.paidRevenue += value
+      }
+    })
+
+    return Array.from(stats.entries())
+      .map(([type, data]) => ({
+        type,
+        ...data,
+        percentage: filteredWorks.length > 0 ? (data.count / filteredWorks.length) * 100 : 0,
+        averageTicket: data.count > 0 ? data.revenue / data.count : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [filteredWorks])
+
+  // ============================================
+  // ANÁLISE MENSAL
+  // ============================================
+
+  const monthlyStats = React.useMemo(() => {
+    const stats = new Map<string, {
+      total: number
+      completed: number
+      paid: number
+      revenue: number
+      paidRevenue: number
+    }>()
+
+    filteredWorks.forEach(work => {
+      const date = new Date(work.delivery_date)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      
+      if (!stats.has(monthKey)) {
+        stats.set(monthKey, { total: 0, completed: 0, paid: 0, revenue: 0, paidRevenue: 0 })
+      }
+
+      const monthData = stats.get(monthKey)!
+      const value = parseValue(work.value)
+
+      monthData.total += 1
+      monthData.revenue += value
+
+      if (work.status === 'Entregue') {
+        monthData.completed += 1
+      }
+
+      if (work.payment_status === 'Pago') {
+        monthData.paid += 1
+        monthData.paidRevenue += value
+      }
+    })
+
+    return Array.from(stats.entries())
+      .map(([month, data]) => ({
+        month: new Date(month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+        monthKey: month,
+        ...data,
+        averageTicket: data.total > 0 ? data.revenue / data.total : 0
+      }))
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+  }, [filteredWorks])
+
+  // ============================================
+  // EXPORTAR CSV
+  // ============================================
 
   const generateCSV = (data: string[][], filename: string) => {
     const BOM = "\uFEFF"
@@ -106,570 +246,382 @@ export function Relatorios() {
     a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     window.URL.revokeObjectURL(url)
-    toast.success(`Relatório ${filename} baixado com sucesso!`)
+    toast.success(`Relatório exportado com sucesso!`)
   }
 
-  // Função para obter dados do relatório completo
-  const getCompleteReportData = () => {
-    return filteredWorks
+  const exportFinancialReport = () => {
+    const headers = ["Métrica", "Valor"]
+    const rows = [
+      ["Total de Projetos", financialMetrics.totalProjects.toString()],
+      ["Projetos Concluídos", financialMetrics.completedProjects.toString()],
+      ["Projetos Pendentes", financialMetrics.pendingProjects.toString()],
+      ["Projetos Pagos", financialMetrics.paidProjects.toString()],
+      ["Projetos Não Pagos", financialMetrics.unpaidProjects.toString()],
+      ["", ""],
+      ["Receita Total", formatCurrency(financialMetrics.totalRevenue)],
+      ["Receita Recebida", formatCurrency(financialMetrics.paidRevenue)],
+      ["Receita Pendente", formatCurrency(financialMetrics.pendingRevenue)],
+      ["Ticket Médio", formatCurrency(financialMetrics.averageTicket)],
+      ["", ""],
+      ["Taxa de Conclusão", `${financialMetrics.completionRate.toFixed(1)}%`],
+      ["Taxa de Pagamento", `${financialMetrics.paymentRate.toFixed(1)}%`]
+    ]
+    generateCSV([headers, ...rows], "relatorio-financeiro")
   }
 
-  const downloadCompleteReport = () => {
-    const headers = ["#", "Tipo", "Desenvolvedor", "Template", "Valor", "Status", "Data", "URL", "Observações"]
+  const exportDeveloperReport = () => {
+    const headers = ["Desenvolvedor", "Total", "Concluídos", "Pagos", "Receita Total", "Receita Recebida", "Receita Pendente", "Ticket Médio", "Taxa Conclusão", "Taxa Pagamento"]
+    const rows = developerStats.map(dev => [
+      dev.developer,
+      dev.total.toString(),
+      dev.completed.toString(),
+      dev.paid.toString(),
+      formatCurrency(dev.totalRevenue),
+      formatCurrency(dev.paidRevenue),
+      formatCurrency(dev.pendingRevenue),
+      formatCurrency(dev.averageTicket),
+      `${dev.completionRate.toFixed(1)}%`,
+      `${dev.paymentRate.toFixed(1)}%`
+    ])
+    generateCSV([headers, ...rows], "relatorio-desenvolvedores")
+  }
+
+  const exportTypeReport = () => {
+    const headers = ["Tipo", "Quantidade", "Percentual", "Receita Total", "Receita Paga", "Ticket Médio"]
+    const rows = typeStats.map(type => [
+      type.type,
+      type.count.toString(),
+      `${type.percentage.toFixed(1)}%`,
+      formatCurrency(type.revenue),
+      formatCurrency(type.paidRevenue),
+      formatCurrency(type.averageTicket)
+    ])
+    generateCSV([headers, ...rows], "relatorio-tipos")
+  }
+
+  const exportMonthlyReport = () => {
+    const headers = ["Mês", "Total", "Concluídos", "Pagos", "Receita Total", "Receita Paga", "Ticket Médio"]
+    const rows = monthlyStats.map(month => [
+      month.month,
+      month.total.toString(),
+      month.completed.toString(),
+      month.paid.toString(),
+      formatCurrency(month.revenue),
+      formatCurrency(month.paidRevenue),
+      formatCurrency(month.averageTicket)
+    ])
+    generateCSV([headers, ...rows], "relatorio-mensal")
+  }
+
+  const exportCompleteReport = () => {
+    const headers = ["#", "Tipo", "Desenvolvedor", "Valor", "Status Entrega", "Status Pagamento", "Data", "Domínio", "Observações"]
     const rows = filteredWorks.map((work, index) => [
       (index + 1).toString(),
-      work.typeWork,
+      work.site_type,
       work.developer || "-",
-      work.template || "-",
       formatCurrency(parseValue(work.value)),
-      work.paymentStatus,
-      formatDate(work.date),
-      work.url,
+      work.status,
+      work.payment_status,
+      formatDate(work.delivery_date),
+      work.domain,
       work.observations || "-"
     ])
     generateCSV([headers, ...rows], "relatorio-completo")
   }
 
-  // Função para obter dados de produtividade
-  const getProductivityReportData = () => {
-    const devStats = new Map<string, { total: number, completed: number, pending: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const dev = work.developer || 'Não atribuído'
-      if (!devStats.has(dev)) {
-        devStats.set(dev, { total: 0, completed: 0, pending: 0, revenue: 0 })
-      }
-      const stats = devStats.get(dev)!
-      stats.total += 1
-      stats.revenue += parseValue(work.value)
-      if (work.paymentStatus === 'Pago') {
-        stats.completed += 1
-      } else {
-        stats.pending += 1
-      }
-    })
-
-    return Array.from(devStats.entries())
-      .sort(([, a], [, b]) => b.total - a.total)
-      .map(([dev, stats]) => ({
-        typeWork: dev,
-        developer: `${stats.completed}/${stats.total}`,
-        url: `${((stats.completed / stats.total) * 100).toFixed(1)}%`,
-        value: stats.revenue,
-        template: formatCurrency(stats.revenue / stats.total)
-      }))
-  }
-
-  const downloadProductivityReport = () => {
-    const devStats = new Map<string, { total: number, completed: number, pending: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const dev = work.developer || 'Não atribuído'
-      if (!devStats.has(dev)) {
-        devStats.set(dev, { total: 0, completed: 0, pending: 0, revenue: 0 })
-      }
-      const stats = devStats.get(dev)!
-      stats.total += 1
-      stats.revenue += parseValue(work.value)
-      if (work.paymentStatus === 'Pago') {
-        stats.completed += 1
-      } else {
-        stats.pending += 1
-      }
-    })
-
-    const headers = ["Desenvolvedor", "Total Projetos", "Concluídos", "Pendentes", "Taxa Conclusão", "Receita Total", "Ticket Médio"]
-    const rows = Array.from(devStats.entries())
-      .sort(([, a], [, b]) => b.total - a.total)
-      .map(([dev, stats]) => [
-        dev,
-        stats.total.toString(),
-        stats.completed.toString(),
-        stats.pending.toString(),
-        `${((stats.completed / stats.total) * 100).toFixed(1)}%`,
-        formatCurrency(stats.revenue),
-        formatCurrency(stats.revenue / stats.total)
-      ])
-
-    generateCSV([headers, ...rows], "relatorio-produtividade")
-  }
-
-  // Função para obter dados financeiros
-  const getFinancialReportData = () => {
-    const totalRevenue = filteredWorks.reduce((acc, w) => acc + parseValue(w.value), 0)
-    const paidRevenue = filteredWorks.filter(w => w.paymentStatus === 'Pago').reduce((acc, w) => acc + parseValue(w.value), 0)
-    const pendingRevenue = totalRevenue - paidRevenue
-
-    return [
-      {
-        typeWork: 'Total de Projetos',
-        url: filteredWorks.length.toString(),
-        value: 0
-      },
-      {
-        typeWork: 'Projetos Concluídos',
-        url: filteredWorks.filter(w => w.paymentStatus === 'Pago').length.toString(),
-        value: 0
-      },
-      {
-        typeWork: 'Projetos Pendentes',
-        url: filteredWorks.filter(w => w.paymentStatus !== 'Pago').length.toString(),
-        value: 0
-      },
-      {
-        typeWork: 'Receita Total',
-        url: formatCurrency(totalRevenue),
-        value: totalRevenue
-      },
-      {
-        typeWork: 'Receita Recebida',
-        url: formatCurrency(paidRevenue),
-        value: paidRevenue
-      },
-      {
-        typeWork: 'Receita Pendente',
-        url: formatCurrency(pendingRevenue),
-        value: pendingRevenue
-      },
-      {
-        typeWork: 'Ticket Médio',
-        url: formatCurrency(totalRevenue / filteredWorks.length),
-        value: totalRevenue / filteredWorks.length
-      }
-    ]
-  }
-
-  const downloadFinancialReport = () => {
-    const totalRevenue = filteredWorks.reduce((acc, w) => acc + parseValue(w.value), 0)
-    const paidRevenue = filteredWorks.filter(w => w.paymentStatus === 'Pago').reduce((acc, w) => acc + parseValue(w.value), 0)
-    const pendingRevenue = totalRevenue - paidRevenue
-
-    const headers = ["Métrica", "Valor"]
-    const rows = [
-      ["Total de Projetos", filteredWorks.length.toString()],
-      ["Projetos Concluídos", filteredWorks.filter(w => w.paymentStatus === 'Pago').length.toString()],
-      ["Projetos Pendentes", filteredWorks.filter(w => w.paymentStatus !== 'Pago').length.toString()],
-      ["Receita Total", formatCurrency(totalRevenue)],
-      ["Receita Recebida", formatCurrency(paidRevenue)],
-      ["Receita Pendente", formatCurrency(pendingRevenue)],
-      ["Ticket Médio", formatCurrency(totalRevenue / filteredWorks.length)],
-      ["Taxa de Conclusão", `${((filteredWorks.filter(w => w.paymentStatus === 'Pago').length / filteredWorks.length) * 100).toFixed(1)}%`]
-    ]
-
-    generateCSV([headers, ...rows], "relatorio-financeiro")
-  }
-
-  // Função para obter dados mensais
-  const getMonthlyReportData = () => {
-    const monthlyData = new Map<string, { total: number, completed: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const date = new Date(work.date)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, { total: 0, completed: 0, revenue: 0 })
-      }
-      const data = monthlyData.get(monthKey)!
-      data.total += 1
-      data.revenue += parseValue(work.value)
-      if (work.paymentStatus === 'Pago') {
-        data.completed += 1
-      }
-    })
-
-    return Array.from(monthlyData.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, data]) => ({
-        typeWork: new Date(month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
-        template: `${data.total}`,
-        developer: `${data.completed}/${data.total}`,
-        value: data.revenue,
-        url: formatCurrency(data.revenue / data.total)
-      }))
-  }
-
-  const downloadMonthlyReport = () => {
-    const monthlyData = new Map<string, { total: number, completed: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const date = new Date(work.date)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, { total: 0, completed: 0, revenue: 0 })
-      }
-      const data = monthlyData.get(monthKey)!
-      data.total += 1
-      data.revenue += parseValue(work.value)
-      if (work.paymentStatus === 'Pago') {
-        data.completed += 1
-      }
-    })
-
-    const headers = ["Mês", "Total Projetos", "Concluídos", "Pendentes", "Receita", "Ticket Médio"]
-    const rows = Array.from(monthlyData.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, data]) => [
-        new Date(month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
-        data.total.toString(),
-        data.completed.toString(),
-        (data.total - data.completed).toString(),
-        formatCurrency(data.revenue),
-        formatCurrency(data.revenue / data.total)
-      ])
-
-    generateCSV([headers, ...rows], "relatorio-mensal")
-  }
-
-  // Função para obter dados por tipo
-  const getTypeReportData = () => {
-    const typeData = new Map<string, { count: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      if (!typeData.has(work.typeWork)) {
-        typeData.set(work.typeWork, { count: 0, revenue: 0 })
-      }
-      const data = typeData.get(work.typeWork)!
-      data.count += 1
-      data.revenue += parseValue(work.value)
-    })
-
-    return Array.from(typeData.entries())
-      .sort(([, a], [, b]) => b.count - a.count)
-      .map(([type, data]) => ({
-        typeWork: type,
-        developer: `${data.count} (${((data.count / filteredWorks.length) * 100).toFixed(1)}%)`,
-        value: data.revenue,
-        url: formatCurrency(data.revenue / data.count)
-      }))
-  }
-
-  const downloadTypeReport = () => {
-    const typeData = new Map<string, { count: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      if (!typeData.has(work.typeWork)) {
-        typeData.set(work.typeWork, { count: 0, revenue: 0 })
-      }
-      const data = typeData.get(work.typeWork)!
-      data.count += 1
-      data.revenue += parseValue(work.value)
-    })
-
-    const headers = ["Tipo", "Quantidade", "Percentual", "Receita", "Ticket Médio"]
-    const rows = Array.from(typeData.entries())
-      .sort(([, a], [, b]) => b.count - a.count)
-      .map(([type, data]) => [
-        type,
-        data.count.toString(),
-        `${((data.count / filteredWorks.length) * 100).toFixed(1)}%`,
-        formatCurrency(data.revenue),
-        formatCurrency(data.revenue / data.count)
-      ])
-
-    generateCSV([headers, ...rows], "relatorio-por-tipo")
-  }
-
-  // Função para obter dados de templates
-  const getTemplateReportData = () => {
-    const templateData = new Map<string, { count: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const template = work.template || 'Não especificado'
-      if (!templateData.has(template)) {
-        templateData.set(template, { count: 0, revenue: 0 })
-      }
-      const data = templateData.get(template)!
-      data.count += 1
-      data.revenue += parseValue(work.value)
-    })
-
-    return Array.from(templateData.entries())
-      .sort(([, a], [, b]) => b.count - a.count)
-      .map(([template, data]) => ({
-        typeWork: template,
-        developer: `${data.count}`,
-        url: `${((data.count / filteredWorks.length) * 100).toFixed(1)}%`,
-        value: data.revenue,
-        template: formatCurrency(data.revenue / data.count)
-      }))
-  }
-
-  const downloadTemplateReport = () => {
-    const templateData = new Map<string, { count: number, revenue: number }>()
-
-    filteredWorks.forEach(work => {
-      const template = work.template || 'Não especificado'
-      if (!templateData.has(template)) {
-        templateData.set(template, { count: 0, revenue: 0 })
-      }
-      const data = templateData.get(template)!
-      data.count += 1
-      data.revenue += parseValue(work.value)
-    })
-
-    const headers = ["Template", "Quantidade", "Percentual", "Receita", "Ticket Médio"]
-    const rows = Array.from(templateData.entries())
-      .sort(([, a], [, b]) => b.count - a.count)
-      .map(([template, data]) => [
-        template,
-        data.count.toString(),
-        `${((data.count / filteredWorks.length) * 100).toFixed(1)}%`,
-        formatCurrency(data.revenue),
-        formatCurrency(data.revenue / data.count)
-      ])
-
-    generateCSV([headers, ...rows], "relatorio-templates")
-  }
-
-  const reports = [
-    {
-      id: 'complete',
-      title: 'Relatório Completo',
-      description: 'Todos os projetos com informações detalhadas',
-      icon: FileText,
-      color: 'text-blue-600 bg-blue-100 dark:bg-blue-950',
-      action: downloadCompleteReport,
-      getData: getCompleteReportData
-    },
-    {
-      id: 'productivity',
-      title: 'Produtividade por Desenvolvedor',
-      description: 'Análise de entregas e performance da equipe',
-      icon: Users,
-      color: 'text-green-600 bg-green-100 dark:bg-green-950',
-      action: downloadProductivityReport,
-      getData: getProductivityReportData
-    },
-    {
-      id: 'financial',
-      title: 'Resumo Financeiro',
-      description: 'Métricas financeiras e receitas',
-      icon: DollarSign,
-      color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-950',
-      action: downloadFinancialReport,
-      getData: getFinancialReportData
-    },
-    {
-      id: 'monthly',
-      title: 'Relatório Mensal',
-      description: 'Evolução de projetos mês a mês',
-      icon: Calendar,
-      color: 'text-purple-600 bg-purple-100 dark:bg-purple-950',
-      action: downloadMonthlyReport,
-      getData: getMonthlyReportData
-    },
-    {
-      id: 'type',
-      title: 'Análise por Tipo',
-      description: 'Distribuição entre Sites e Landing Pages',
-      icon: Package,
-      color: 'text-orange-600 bg-orange-100 dark:bg-orange-950',
-      action: downloadTypeReport,
-      getData: getTypeReportData
-    },
-    {
-      id: 'template',
-      title: 'Análise de Templates',
-      description: 'Templates Envato mais utilizados',
-      icon: TrendingUp,
-      color: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-950',
-      action: downloadTemplateReport,
-      getData: getTemplateReportData
-    }
-  ]
-
   return (
     <div className="space-y-6 pb-6">
       <PageHeader
-        title="Relatórios e Exportações"
-        description="Gere relatórios personalizados e exporte dados em formato CSV para análise externa."
+        title="Relatórios Financeiros"
+        description="Análise detalhada e precisa de receitas, pagamentos e performance do projeto."
       />
 
       {/* Filtros */}
-      <div className="rounded-xl border bg-card shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Filtros de Dados</h3>
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="border-b bg-muted/10">
+          <div className="p-4 space-y-3">
+            {/* Linha 1: Filtros de Data e Contador */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="h-10"
+                  />
+                  <span className="text-xs text-muted-foreground">até</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium whitespace-nowrap">
+                  {filteredWorks.length} de {works.length} projeto(s)
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStartDate('')
+                    setEndDate('')
+                    setFilterType('all')
+                    setFilterPayment('all')
+                    setFilterDeveloper('all')
+                  }}
+                >
+                  <Filter className="h-4 w-4 mr-1.5" />
+                  Limpar
+                </Button>
+              </div>
+            </div>
+
+            {/* Linha 2: Filtros Principais */}
+            <div className="flex flex-wrap gap-3">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tipo de Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  {SITE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterDeveloper} onValueChange={setFilterDeveloper}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Desenvolvedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Desenvolvedores</SelectItem>
+                  {developers.map((dev) => (
+                    <SelectItem key={dev} value={dev}>{dev}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPayment} onValueChange={setFilterPayment}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Status de Pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Pagamentos</SelectItem>
+                  {PAYMENT_STATUS.map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground mb-6">
-          Aplique filtros para gerar relatórios personalizados. Os filtros afetam todos os relatórios abaixo.
-        </p>
+      </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data Início</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
+      {/* Resumo Financeiro */}
+      <div>
+        <h3 className="text-lg font-bold mb-4">Resumo Financeiro</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Receita Total</p>
+              <DollarSign className="h-5 w-5 text-blue-600" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(financialMetrics.totalRevenue)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.totalProjects} projetos</p>
+          </Card>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data Fim</label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Receita Recebida</p>
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            </div>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(financialMetrics.paidRevenue)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.paidProjects} pagos ({financialMetrics.paymentRate.toFixed(1)}%)</p>
+          </Card>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo</label>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {SITE_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Receita Pendente</p>
+              <Package className="h-5 w-5 text-orange-600" />
+            </div>
+            <p className="text-2xl font-bold text-orange-600">{formatCurrency(financialMetrics.pendingRevenue)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.unpaidProjects} não pagos</p>
+          </Card>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Status</label>
-            <Select value={filterPayment} onValueChange={setFilterPayment}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {PAYMENT_STATUS.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Desenvolvedor</label>
-            <Select value={filterDeveloper} onValueChange={setFilterDeveloper}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {developers.map((dev) => (
-                  <SelectItem key={dev} value={dev}>{dev}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Ticket Médio</p>
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(financialMetrics.averageTicket)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Por projeto</p>
+          </Card>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{filteredWorks.length}</span> de {works.length} projetos selecionados
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setStartDate('')
-              setEndDate('')
-              setFilterType('all')
-              setFilterPayment('all')
-              setFilterDeveloper('all')
-            }}
-          >
-            Limpar Filtros
+        <div className="mt-4">
+          <Button onClick={exportFinancialReport} className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Resumo Financeiro
           </Button>
         </div>
       </div>
 
-      {/* Relatórios Disponíveis */}
+      {/* Por Desenvolvedor */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Relatórios Disponíveis</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {reports.map((report) => (
-            <Card key={report.id} className="p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-lg ${report.color}`}>
-                  <report.icon className="h-6 w-6" />
-                </div>
-              </div>
-              <h4 className="font-bold mb-2">{report.title}</h4>
-              <p className="text-sm text-muted-foreground mb-4">{report.description}</p>
-              <div className="space-y-2">
-                <Button
-                  onClick={() => setPreviewReport(report)}
-                  variant="outline"
-                  className="w-full"
-                  disabled={filteredWorks.length === 0}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Visualizar
-                </Button>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={report.action}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={filteredWorks.length === 0}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    CSV
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      generatePDF(filteredWorks, report.title)
-                      toast.success('PDF gerado com sucesso!')
-                    }}
-                    className="flex-1"
-                    disabled={filteredWorks.length === 0}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <h3 className="text-lg font-bold mb-4">Análise por Desenvolvedor</h3>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold">Desenvolvedor</th>
+                  <th className="text-right px-4 py-3 font-semibold">Total</th>
+                  <th className="text-right px-4 py-3 font-semibold">Pagos</th>
+                  <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
+                  <th className="text-right px-4 py-3 font-semibold">Recebida</th>
+                  <th className="text-right px-4 py-3 font-semibold">Pendente</th>
+                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {developerStats.map((dev, index) => (
+                  <tr key={index} className="border-b hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{dev.developer}</td>
+                    <td className="text-right px-4 py-3">{dev.total}</td>
+                    <td className="text-right px-4 py-3 text-green-600">{dev.paid}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(dev.totalRevenue)}</td>
+                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(dev.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3 text-orange-600">{formatCurrency(dev.pendingRevenue)}</td>
+                    <td className="text-right px-4 py-3">{formatCurrency(dev.averageTicket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <div className="mt-4">
+          <Button onClick={exportDeveloperReport} variant="outline" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Análise por Desenvolvedor
+          </Button>
         </div>
       </div>
 
-      {/* Informações */}
-      <div className="rounded-xl border bg-muted/50 p-6">
-        <h4 className="font-semibold mb-2">ℹ️ Sobre os Relatórios</h4>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• Clique em "Visualizar" para ver o relatório antes de exportar</li>
-          <li>• Todos os relatórios são exportados em formato CSV (compatível com Excel) ou PDF</li>
-          <li>• Use os filtros acima para personalizar os dados exportados</li>
-          <li>• Os arquivos incluem a data de geração no nome</li>
-          <li>• Codificação UTF-8 com BOM para suporte a caracteres especiais</li>
-        </ul>
+      {/* Por Tipo */}
+      <div>
+        <h3 className="text-lg font-bold mb-4">Análise por Tipo de Projeto</h3>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold">Tipo</th>
+                  <th className="text-right px-4 py-3 font-semibold">Quantidade</th>
+                  <th className="text-right px-4 py-3 font-semibold">%</th>
+                  <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
+                  <th className="text-right px-4 py-3 font-semibold">Receita Paga</th>
+                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {typeStats.map((type, index) => (
+                  <tr key={index} className="border-b hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{type.type}</td>
+                    <td className="text-right px-4 py-3">{type.count}</td>
+                    <td className="text-right px-4 py-3">{type.percentage.toFixed(1)}%</td>
+                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(type.revenue)}</td>
+                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(type.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3">{formatCurrency(type.averageTicket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <div className="mt-4">
+          <Button onClick={exportTypeReport} variant="outline" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Análise por Tipo
+          </Button>
+        </div>
       </div>
 
-      {/* Preview Dialog */}
-      {previewReport && previewReport.id === 'complete' && (
-        <ReportPreview
-          isOpen={true}
-          onClose={() => setPreviewReport(null)}
-          works={previewReport.getData()}
-          title={previewReport.title}
-          onDownloadCSV={() => {
-            previewReport.action()
-            setPreviewReport(null)
-          }}
-        />
-      )}
-      
-      {previewReport && previewReport.id !== 'complete' && (
-        <CustomReportPreview
-          isOpen={true}
-          onClose={() => setPreviewReport(null)}
-          title={previewReport.title}
-          data={previewReport.getData()}
-          columns={getColumnsForReport(previewReport.id)}
-          onDownloadCSV={() => {
-            previewReport.action()
-            setPreviewReport(null)
-          }}
-        />
-      )}
+      {/* Mensal */}
+      <div>
+        <h3 className="text-lg font-bold mb-4">Análise Mensal</h3>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold">Mês</th>
+                  <th className="text-right px-4 py-3 font-semibold">Total</th>
+                  <th className="text-right px-4 py-3 font-semibold">Concluídos</th>
+                  <th className="text-right px-4 py-3 font-semibold">Pagos</th>
+                  <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
+                  <th className="text-right px-4 py-3 font-semibold">Receita Paga</th>
+                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyStats.map((month, index) => (
+                  <tr key={index} className="border-b hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{month.month}</td>
+                    <td className="text-right px-4 py-3">{month.total}</td>
+                    <td className="text-right px-4 py-3">{month.completed}</td>
+                    <td className="text-right px-4 py-3 text-green-600">{month.paid}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(month.revenue)}</td>
+                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(month.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3">{formatCurrency(month.averageTicket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <div className="mt-4">
+          <Button onClick={exportMonthlyReport} variant="outline" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Análise Mensal
+          </Button>
+        </div>
+      </div>
+
+      {/* Relatório Completo */}
+      <div>
+        <h3 className="text-lg font-bold mb-4">Relatório Completo</h3>
+        <Card className="p-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            Exporte todos os {filteredWorks.length} projetos selecionados com informações detalhadas.
+          </p>
+          <Button onClick={exportCompleteReport} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Relatório Completo
+          </Button>
+        </Card>
+      </div>
+
+      {/* Informações */}
+      <Card className="p-6 bg-muted/50">
+        <h4 className="font-semibold mb-2">ℹ️ Sobre os Cálculos</h4>
+        <ul className="text-sm text-muted-foreground space-y-1">
+          <li>• <strong>Receita Total:</strong> Soma de todos os valores dos projetos filtrados</li>
+          <li>• <strong>Receita Recebida:</strong> Soma apenas dos projetos com status "Pago"</li>
+          <li>• <strong>Receita Pendente:</strong> Soma dos projetos com status diferente de "Pago"</li>
+          <li>• <strong>Ticket Médio:</strong> Receita total dividida pelo número de projetos</li>
+          <li>• <strong>Taxa de Pagamento:</strong> Percentual de projetos pagos em relação ao total</li>
+          <li>• Todos os cálculos são precisos e validados para uso financeiro</li>
+        </ul>
+      </Card>
     </div>
   )
 }

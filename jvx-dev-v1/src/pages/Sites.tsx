@@ -19,7 +19,7 @@ import { useWorks } from '@/contexts/WorksContext'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 
-export function Sites() {
+function Sites() {
   const { works, loading, reload } = useWorks()
   const [editingWork, setEditingWork] = React.useState<Work | null>(null)
   const [open, setOpen] = React.useState(false)

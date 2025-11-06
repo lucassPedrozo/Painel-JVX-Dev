@@ -8,7 +8,7 @@ import { useWorks } from '@/contexts/WorksContext'
 import { formatCurrency, parseValue, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
-export function Calendario() {
+function Calendario() {
   const { works } = useWorks()
   const [currentDate, setCurrentDate] = React.useState(new Date())
   const [filterDeveloper, setFilterDeveloper] = React.useState('all')

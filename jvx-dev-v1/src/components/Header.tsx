@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
 import { ModeToggle } from "@/components/ui/mode-toggle"
-import { NotificationPanel } from "@/components/NotificationPanel"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
@@ -94,7 +93,6 @@ export function Header() {
 
         {/* Ações */}
         <div className="flex items-center gap-2">
-          <NotificationPanel />
           <ModeToggle />
           
           {/* Menu do Usuário */}

@@ -17,7 +17,7 @@ interface DeveloperStats {
   pendingValue: number
 }
 
-export function Equipe() {
+function Equipe() {
   const { works } = useWorks()
   const [selectedDeveloper, setSelectedDeveloper] = React.useState<string | null>(null)
 

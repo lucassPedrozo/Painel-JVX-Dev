@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription } from '../components/ui/alert'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +32,7 @@ import {
   Info
 } from 'lucide-react'
 
-export function Configuracoes() {
+function Configuracoes() {
   const { isMaster } = useAuth()
   const { works, reload } = useWorks()
   const [importing, setImporting] = useState(false)

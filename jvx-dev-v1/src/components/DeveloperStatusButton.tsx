@@ -1,6 +1,12 @@
 import * as React from 'react'
 import { CheckCircle, Clock, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { api, type Work } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -40,8 +46,23 @@ export function DeveloperStatusButton({ work, onUpdate }: DeveloperStatusButtonP
   }
 
   const isCompleted = work.developer_status === 'Concluído'
+  
+  // Formatar data de conclusão
+  const getCompletedDate = () => {
+    if (!work.completed_at) return null
+    const date = new Date(work.completed_at)
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
 
-  return (
+  const completedDate = getCompletedDate()
+
+  const button = (
     <Button
       variant={isCompleted ? "default" : "outline"}
       size="sm"
@@ -63,4 +84,22 @@ export function DeveloperStatusButton({ work, onUpdate }: DeveloperStatusButtonP
       {loading ? 'Atualizando...' : isCompleted ? 'Concluído' : 'Em Andamento'}
     </Button>
   )
+
+  // Se estiver concluído e tiver data, mostrar tooltip
+  if (isCompleted && completedDate) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {button}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">Concluído em: {completedDate}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  return button
 }

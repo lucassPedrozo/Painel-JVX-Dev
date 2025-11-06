@@ -15,10 +15,8 @@ Sistema completo para gerenciamento de projetos de desenvolvimento web, com cont
 - [Configuração](#-configuração)
 - [Uso](#-uso)
 - [Importação de Dados](#-importação-de-dados)
-- [Deploy](#-deploy)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Scripts Disponíveis](#-scripts-disponíveis)
-- [Contribuindo](#-contribuindo)
 - [Licença](#-licença)
 
 ## ✨ Características
@@ -34,7 +32,7 @@ Sistema completo para gerenciamento de projetos de desenvolvimento web, com cont
 - **Importação/Exportação**: Suporte a CSV para backup e migração de dados
 - **Multi-usuário**: Sistema de autenticação com níveis de acesso (Master/Standard)
 
-### � Segaurança
+### 🔒 Segurança
 
 - Autenticação JWT
 - Senhas criptografadas com bcrypt
@@ -101,7 +99,7 @@ pnpm install
 mysql -u root -p
 
 # Execute o script de inicialização
-source database-init-clean.sql
+source database/database-init-clean.sql
 ```
 
 ### 4. Configure as variáveis de ambiente
@@ -211,7 +209,7 @@ Os arquivos otimizados estarão em `dist/`
 ### Método 2: Script Direto (Recomendado para grandes volumes)
 
 ```bash
-node importar-csv-direto.js
+npm run import
 ```
 
 **Vantagens:**
@@ -241,74 +239,81 @@ Alexandre,Normal,"R$ 200,00",exemplo.com.br,Site Institucional,01/04/2024,Abril,
 
 ### Validação de Dados
 
-Antes de importar, valide o CSV:
-
-```bash
-node testar-importacao-csv.js
-```
-
 Após importar, verifique os dados:
 
 ```bash
-node verificar-dados.js
+npm run verify
 ```
 
 ## 🌐 Deploy
 
-Consulte o arquivo [DEPLOY.md](./DEPLOY.md) para instruções detalhadas de deploy em diferentes ambientes:
+### Build de Produção
 
-- Vercel
-- Netlify
-- VPS (Ubuntu/Debian)
-- Docker
-- Heroku
+```bash
+npm run build
+```
+
+Os arquivos otimizados estarão em `dist/`
+
+### Variáveis de Ambiente para Produção
+
+Configure as seguintes variáveis no seu ambiente de produção:
+
+```env
+DB_HOST=seu_host_mysql
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+DB_NAME=worksdb
+PORT=3001
+JWT_SECRET=sua_chave_secreta_forte
+CORS_ORIGIN=https://seu-dominio.com
+VITE_API_URL=https://api.seu-dominio.com
+```
 
 ## 📁 Estrutura do Projeto
 
 ```
 jvx-desenvolvimento/
+├── database/                    # Scripts de banco de dados
+│   └── database-init-clean.sql # Script de inicialização
+├── docs/                        # Documentação
+│   ├── ESTRUTURA-PROJETO.md    # Estrutura detalhada
+│   ├── INICIO-RAPIDO.md        # Guia de início rápido
+│   ├── LIMPEZA-REALIZADA.md    # Log de limpeza
+│   └── RESUMO-LIMPEZA.txt      # Resumo executivo
 ├── public/                      # Arquivos públicos
 │   └── Relatório de Desenvolvimento - Desenvolvimento.csv
-├── src/
-│   ├── assets/                  # Imagens e recursos
-│   ├── components/              # Componentes React
-│   │   ├── ui/                  # Componentes base (shadcn)
-│   │   ├── dashboard/           # Componentes do dashboard
-│   │   ├── Header.tsx
-│   │   ├── WorksTable.tsx
-│   │   └── ...
-│   ├── contexts/                # Contextos React
-│   │   ├── AuthContext.tsx
-│   │   ├── WorksContext.tsx
-│   │   └── NotificationsContext.tsx
-│   ├── hooks/                   # Custom hooks
-│   ├── lib/                     # Utilitários
-│   │   ├── api.ts              # Cliente API
-│   │   ├── utils.ts            # Funções auxiliares
-│   │   ├── constants.ts        # Constantes
-│   │   └── pdf-export.ts       # Exportação PDF
-│   ├── pages/                   # Páginas
-│   │   ├── Home.tsx
-│   │   ├── Sites.tsx
-│   │   ├── Analises.tsx
-│   │   ├── Calendario.tsx
-│   │   ├── Equipe.tsx
-│   │   ├── Relatorios.tsx
-│   │   ├── Configuracoes.tsx
-│   │   └── GerenciarUsuarios.tsx
-│   ├── App.tsx                  # Componente principal
-│   ├── main.tsx                 # Entry point
-│   └── index.css                # Estilos globais
-├── database-init-clean.sql      # Script de inicialização do banco
-├── server.js                    # Servidor Express
-├── importar-csv-direto.js       # Script de importação
-├── testar-importacao-csv.js     # Script de validação
-├── verificar-dados.js           # Script de verificação
-├── .env.example                 # Exemplo de variáveis de ambiente
-├── package.json                 # Dependências
-├── vite.config.ts              # Configuração Vite
+├── scripts/                     # Scripts utilitários
+│   ├── importar-csv-direto.js  # Importação de CSV
+│   ├── popular-banco-completo.js # Popular banco
+│   ├── testar-conexao-db.js    # Teste de conexão
+│   └── verificar-dados.js      # Verificação de dados
+├── src/                         # Código fonte frontend
+│   ├── assets/                 # Imagens e recursos
+│   ├── components/             # Componentes React
+│   │   ├── ui/                 # Componentes base (shadcn)
+│   │   ├── dashboard/          # Componentes do dashboard
+│   │   ├── skeletons/          # Loading skeletons
+│   │   └── [...]               # Outros componentes
+│   ├── contexts/               # Contextos React
+│   ├── hooks/                  # Custom hooks
+│   ├── lib/                    # Utilitários
+│   ├── pages/                  # Páginas da aplicação
+│   ├── App.tsx                 # Componente principal
+│   ├── main.tsx                # Entry point
+│   └── index.css               # Estilos globais
+├── .env.example                # Exemplo de variáveis de ambiente
+├── .gitignore                  # Arquivos ignorados pelo Git
+├── components.json             # Configuração Shadcn/ui
+├── eslint.config.js            # Configuração ESLint
+├── index.html                  # HTML principal
+├── iniciar-projeto.bat         # Script de inicialização (Windows)
+├── LICENSE                     # Licença MIT
+├── package.json                # Dependências e scripts
+├── README.md                   # Este arquivo
+├── server.js                   # Servidor Express (Backend)
 ├── tsconfig.json               # Configuração TypeScript
-└── README.md                    # Este arquivo
+└── vite.config.ts              # Configuração Vite
 ```
 
 ## 📜 Scripts Disponíveis
@@ -318,6 +323,7 @@ jvx-desenvolvimento/
 ```bash
 npm run dev          # Inicia frontend (Vite)
 npm run server       # Inicia backend (Express)
+npm start            # Inicia backend e frontend simultaneamente
 ```
 
 ### Build
@@ -325,20 +331,16 @@ npm run server       # Inicia backend (Express)
 ```bash
 npm run build        # Build de produção
 npm run preview      # Preview do build
+npm run lint         # Executa ESLint
 ```
 
 ### Utilitários
 
 ```bash
-node importar-csv-direto.js      # Importa CSV diretamente no banco
-node testar-importacao-csv.js    # Valida arquivo CSV
-node verificar-dados.js          # Verifica dados no banco
-```
-
-### Linting
-
-```bash
-npm run lint         # Executa ESLint
+npm run import       # Importa CSV diretamente no banco
+npm run verify       # Verifica dados no banco
+npm run test-db      # Testa conexão com banco de dados
+npm run populate     # Popula banco com dados de exemplo
 ```
 
 ## 👥 Gerenciamento de Usuários
@@ -432,15 +434,7 @@ mysql -u root -p < database-init-clean.sql
 - Otimize imagens antes do upload
 - Use CDN para assets estáticos em produção
 
-## 🤝 Contribuindo
 
-Contribuições são bem-vindas! Por favor:
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
 
 ## 📄 Licença
 

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider } from "@/components/ui/theme-provider"
 import { AuthProvider, useAuth } from "@/contexts/AuthContext"
 import { WorksProvider, useWorks } from "@/contexts/WorksContext"
-import { NotificationsProvider } from "@/contexts/NotificationsContext"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Header } from "@/components/Header"
@@ -22,13 +21,11 @@ const Configuracoes = lazy(() => import("./pages/Configuracoes"))
 const GerenciarUsuarios = lazy(() => import("./pages/GerenciarUsuarios"))
 
 function AppContent() {
-  const { works } = useWorks()
   const { user } = useAuth()
   
   return (
     <ErrorBoundary>
-      <NotificationsProvider works={works}>
-        <Suspense fallback={<LoadingScreen />}>
+      <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/login" element={
               user ? <Navigate to="/" replace /> : <Login />
@@ -122,9 +119,8 @@ function AppContent() {
               </ProtectedRoute>
             } />
           </Routes>
-        </Suspense>
-        <Toaster richColors position="top-center" />
-      </NotificationsProvider>
+      </Suspense>
+      <Toaster richColors position="top-center" />
     </ErrorBoundary>
   )
 }

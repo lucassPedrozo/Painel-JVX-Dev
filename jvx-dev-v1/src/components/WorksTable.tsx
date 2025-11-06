@@ -12,8 +12,7 @@ import {
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 import { QuickActions } from './QuickActions'
-import { DeveloperStatusButton } from './DeveloperStatusButton'
-import { StatusBadge } from './StatusBadge'
+import { UnifiedStatusBadge } from './UnifiedStatusBadge'
 
 interface WorksTableProps {
   works: Work[]
@@ -183,10 +182,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                           </span>
                         </td>
                         <td className="px-3 py-3 min-w-[140px] w-[140px]">
-                          <div className="flex flex-col gap-1">
-                            <StatusBadge work={work} />
-                            <DeveloperStatusButton work={work} onUpdate={onDelete} />
-                          </div>
+                          <UnifiedStatusBadge work={work} onUpdate={onDelete} />
                         </td>
                         <td className="px-3 py-3 min-w-[120px] w-[120px]">
                           <Badge 

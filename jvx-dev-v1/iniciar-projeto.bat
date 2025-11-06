@@ -54,7 +54,7 @@ echo ═════════════════════════
 echo.
 
 REM Testar conexão com banco
-call npm run test-xampp
+call npm run test-db
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo ═══════════════════════════════════════════════════════════
@@ -69,7 +69,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo 💡 Para criar o banco:
     echo    1. Acesse: http://localhost/phpmyadmin
     echo    2. Clique na aba SQL
-    echo    3. Cole o conteúdo de: database-init-clean.sql
+    echo    3. Cole o conteúdo de: database/database-init-clean.sql
     echo    4. Clique em Executar
     echo.
     pause
