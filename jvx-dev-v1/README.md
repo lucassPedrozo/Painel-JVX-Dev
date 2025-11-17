@@ -6,6 +6,25 @@ Sistema completo para gerenciamento de projetos de desenvolvimento web, com cont
 ![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+## 🚀 Início Rápido
+
+**Quer começar agora?** Siga um destes guias:
+
+- 📖 **[INICIO-RAPIDO.md](INICIO-RAPIDO.md)** - 3 passos para começar (recomendado)
+- 📚 **[COMO-USAR.md](COMO-USAR.md)** - Guia completo de instalação e uso
+- ✅ **[CHECKLIST-INSTALACAO.md](CHECKLIST-INSTALACAO.md)** - Verificação passo a passo
+
+### ⚡ Resumo Ultra-Rápido
+
+1. Instale Node.js e XAMPP
+2. Crie o banco `worksdb` no phpMyAdmin
+3. Duplo clique em `iniciar-projeto.bat`
+4. Acesse http://localhost:5173
+
+**Login:** jvxadmin / admin123
+
+---
+
 ## 📋 Índice
 
 - [Características](#-características)
