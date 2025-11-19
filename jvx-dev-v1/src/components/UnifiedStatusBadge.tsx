@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { CheckCircle, Clock, Loader2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +23,11 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
   // Se o projeto está pago, considerar como concluído
   const isPaid = work.payment_status === 'Pago'
   const isCompleted = isPaid || work.developer_status === 'Concluído'
+  
+  // Verificar permissões: Master pode alterar qualquer projeto, Desenvolvedor apenas os seus
+  const isMaster = user?.role === 'master'
   const isDeveloper = user?.role === 'standard' && work.developer === user.developerName
+  const canEdit = isMaster || isDeveloper
 
   // Formatar data de conclusão
   const getCompletedDate = () => {
@@ -38,10 +42,17 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
     })
   }
 
+  // Formatar quem completou
+  const getCompletedBy = () => {
+    if (!work.completed_by) return null
+    return work.completed_by
+  }
+
   const completedDate = getCompletedDate()
+  const completedBy = getCompletedBy()
 
   const handleToggleStatus = async () => {
-    if (!isDeveloper) return
+    if (!canEdit) return
     
     setLoading(true)
     try {
@@ -63,67 +74,93 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
     }
   }
 
-  // Badge visual (igual para todos)
-  const badge = (
-    <Badge 
-      variant={isCompleted ? "default" : "secondary"}
-      className={`font-medium text-xs inline-flex items-center gap-1 ${
+  // Botão redesenhado seguindo o padrão do sistema
+  const statusButton = (
+    <Button
+      variant={isCompleted ? "default" : "outline"}
+      size="sm"
+      className={`h-7 px-3 text-xs font-medium transition-all ${
         isCompleted 
-          ? 'bg-green-600 hover:bg-green-700' 
-          : 'border-orange-300 text-orange-600 bg-orange-50 dark:bg-orange-950'
-      } ${isDeveloper ? 'cursor-pointer' : 'cursor-default'}`}
-      onClick={isDeveloper ? handleToggleStatus : undefined}
+          ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+          : 'border-orange-300 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950'
+      } ${canEdit ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
+      onClick={canEdit ? handleToggleStatus : undefined}
+      disabled={loading || !canEdit}
     >
       {loading ? (
-        <Loader2 className="h-3 w-3 animate-spin" />
+        <>
+          <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+          Atualizando...
+        </>
       ) : isCompleted ? (
-        <CheckCircle className="h-3 w-3" />
+        <>
+          <CheckCircle className="h-3 w-3 mr-1.5" />
+          Concluído
+        </>
       ) : (
-        <Clock className="h-3 w-3" />
+        <>
+          <Clock className="h-3 w-3 mr-1.5" />
+          Em Andamento
+        </>
       )}
-      {loading ? 'Atualizando...' : isCompleted ? 'Concluído' : 'Em Andamento'}
-    </Badge>
+    </Button>
   )
 
-  // Se estiver concluído e tiver data, mostrar tooltip
-  if (isCompleted && completedDate) {
+  // Se estiver concluído e tiver data, mostrar tooltip com informações
+  if (isCompleted && (completedDate || completedBy)) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="w-fit">
-              {badge}
+              {statusButton}
             </div>
           </TooltipTrigger>
-          <TooltipContent side="left" className="bg-foreground text-background">
-            <p className="text-xs font-medium">Concluído em:</p>
-            <p className="text-xs">{completedDate}</p>
-            {isDeveloper && (
-              <p className="text-xs text-muted-foreground mt-1">Clique para alterar</p>
-            )}
+          <TooltipContent side="left" className="max-w-xs">
+            <div className="space-y-1">
+              {completedDate && (
+                <>
+                  <p className="text-xs font-semibold">Concluído em:</p>
+                  <p className="text-xs text-muted-foreground">{completedDate}</p>
+                </>
+              )}
+              {completedBy && (
+                <>
+                  <p className="text-xs font-semibold mt-2">Por:</p>
+                  <p className="text-xs text-muted-foreground">{completedBy}</p>
+                </>
+              )}
+              {canEdit && (
+                <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                  Clique para alterar o status
+                </p>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     )
   }
 
-  // Se for desenvolvedor e não tiver data, mostrar tooltip com instrução
-  if (isDeveloper) {
+  // Se puder editar, mostrar tooltip com instrução
+  if (canEdit) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="w-fit">
-              {badge}
+              {statusButton}
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">Clique para marcar como {isCompleted ? 'em andamento' : 'concluído'}</p>
+            <p className="text-xs">
+              Clique para marcar como {isCompleted ? 'em andamento' : 'concluído'}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     )
   }
 
-  return badge
+  return statusButton
 }

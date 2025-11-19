@@ -68,6 +68,7 @@ CREATE TABLE works (
   value DECIMAL(10, 2) NOT NULL COMMENT 'Valor do trabalho em R$',
   developer_status VARCHAR(50) NOT NULL DEFAULT 'Em Andamento' COMMENT 'Status do desenvolvedor (Em Andamento, Concluído)',
   completed_at TIMESTAMP NULL COMMENT 'Data e hora em que o projeto foi marcado como concluído',
+  completed_by VARCHAR(100) NULL COMMENT 'Usuário que marcou o projeto como concluído',
   domain VARCHAR(255) NOT NULL COMMENT 'Domínio/URL do desenvolvimento',
   site_type VARCHAR(100) NOT NULL COMMENT 'Tipo de Site (Site Institucional, Landing Page, Site Corporativo)',
   template VARCHAR(500) COMMENT 'URL do template utilizado (ThemeForest, etc)',
@@ -89,6 +90,7 @@ CREATE INDEX idx_payment_status ON works(payment_status);
 CREATE INDEX idx_delivery_year ON works(delivery_year);
 CREATE INDEX idx_delivery_month ON works(delivery_month);
 CREATE INDEX idx_developer_status ON works(developer_status);
+CREATE INDEX idx_completed_by ON works(completed_by);
 
 -- ============================================
 -- Verificação

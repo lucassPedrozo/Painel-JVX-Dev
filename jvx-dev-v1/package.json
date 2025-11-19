@@ -37,7 +37,8 @@
     "verify": "node scripts/database/verificar-dados.js",
     "test-db": "node scripts/database/testar-conexao-db.js",
     "test-api": "node scripts/test/testar-api.js",
-    "populate": "node scripts/database/popular-banco-completo.js"
+    "populate": "node scripts/database/popular-banco-completo.js",
+    "migrate": "node scripts/database/run-migration-completed-by.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

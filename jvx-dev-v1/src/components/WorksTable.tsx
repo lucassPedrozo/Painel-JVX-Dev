@@ -77,6 +77,9 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                   <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[140px] w-[140px]">
                     Status
                   </th>
+                  <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[130px] w-[130px]">
+                    Concluído Por
+                  </th>
                   <th className="text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground min-w-[120px] w-[120px]">
                     Pagamento
                   </th>
@@ -87,7 +90,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                       className="h-6 -ml-2 hover:bg-muted/80 font-semibold text-xs uppercase tracking-wider px-2"
                       onClick={() => onSort("date")}
                     >
-                      Data
+                      Data Início
                       {getSortIcon("date")}
                     </Button>
                   </th>
@@ -105,7 +108,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={11} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={12} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         <span>Carregando projetos...</span>
@@ -114,7 +117,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                   </tr>
                 ) : works.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={12} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-4xl">📋</span>
                         <span>Nenhum projeto encontrado</span>
@@ -184,6 +187,27 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                         <td className="px-3 py-3 min-w-[140px] w-[140px]">
                           <UnifiedStatusBadge work={work} onUpdate={onDelete} />
                         </td>
+                        <td className="px-3 py-3 min-w-[130px] w-[130px]">
+                          {work.completed_by ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground truncate block cursor-default">
+                                  {work.completed_by}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Concluído por: {work.completed_by}</p>
+                                {work.completed_at && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(work.completed_at).toLocaleString('pt-BR')}
+                                  </p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </td>
                         <td className="px-3 py-3 min-w-[120px] w-[120px]">
                           <Badge 
                             variant={isPaid ? "default" : "destructive"}
@@ -236,7 +260,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                             <QuickActions
                               work={work}
                               onEdit={onEdit}
-                              onDelete={() => {}}
+                              onDelete={onDelete}
                               onUpdate={onDelete}
                             />
                           </div>

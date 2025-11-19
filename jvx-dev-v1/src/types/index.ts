@@ -32,6 +32,7 @@ export interface Work {
   payment_status: string
   observations?: string
   completed_at?: string | null
+  completed_by?: string | null
   created_at?: string
   updated_at?: string
 }

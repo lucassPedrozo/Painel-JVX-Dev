@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, CheckCircle, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
@@ -20,33 +20,60 @@ function Calendario() {
     return Array.from(devs).sort()
   }, [works])
 
-  // Calcular status do prazo baseado na data de entrega
-  const getDeadlineStatus = (work: Work) => {
-    const deliveryDate = new Date(work.delivery_date)
+  // Calcular status do projeto baseado em finalização e pagamento
+  const getProjectStatus = (work: Work) => {
+    const projectDate = new Date(work.delivery_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    deliveryDate.setHours(0, 0, 0, 0)
+    projectDate.setHours(0, 0, 0, 0)
     
     const isPaid = work.payment_status === 'Pago'
     const isCompleted = work.developer_status === 'Concluído'
-    const daysUntilDeadline = Math.ceil((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     
+    // Calcular primeiro dia do mês seguinte à data do projeto
+    const nextMonthFirstDay = new Date(projectDate.getFullYear(), projectDate.getMonth() + 1, 1)
+    nextMonthFirstDay.setHours(0, 0, 0, 0)
+    
+    const isPastPaymentDeadline = today >= nextMonthFirstDay
+    
+    // Prioridade 1: Pagamento Pendente (finalizado, não pago, passou do dia 1 do mês seguinte)
+    if (isCompleted && !isPaid && isPastPaymentDeadline) {
+      const daysPending = Math.ceil((today.getTime() - nextMonthFirstDay.getTime()) / (1000 * 60 * 60 * 24))
+      return { 
+        status: 'payment-pending', 
+        label: 'Pagamento Pendente', 
+        color: 'bg-yellow-500', 
+        days: daysPending,
+        priority: 1
+      }
+    }
+    
+    // Prioridade 2: Concluído e Pago
     if (isPaid && isCompleted) {
-      return { status: 'completed', label: 'Concluído', color: 'bg-green-500', days: 0 }
-    } else if (daysUntilDeadline < 0) {
-      return { status: 'overdue', label: 'Atrasado', color: 'bg-red-500', days: Math.abs(daysUntilDeadline) }
-    } else if (daysUntilDeadline <= 7) {
-      return { status: 'urgent', label: 'Urgente', color: 'bg-orange-500', days: daysUntilDeadline }
-    } else {
-      return { status: 'ontime', label: 'No Prazo', color: 'bg-blue-500', days: daysUntilDeadline }
+      return { 
+        status: 'completed', 
+        label: 'Concluído e Pago', 
+        color: 'bg-green-500', 
+        days: 0,
+        priority: 3
+      }
+    }
+    
+    // Prioridade 3: No Prazo (todos os outros casos)
+    return { 
+      status: 'ontime', 
+      label: 'No Prazo', 
+      color: 'bg-blue-500', 
+      days: 0,
+      priority: 2
     }
   }
 
   const filteredWorks = React.useMemo(() => {
     return works.filter(work => {
       const matchesDev = filterDeveloper === 'all' || work.developer === filterDeveloper
-      const deadlineStatus = getDeadlineStatus(work)
-      const matchesStatus = filterStatus === 'all' || deadlineStatus.status === filterStatus
+      const projectStatus = getProjectStatus(work)
+      const matchesStatus = filterStatus === 'all' || projectStatus.status === filterStatus
       return matchesDev && matchesStatus
     })
   }, [works, filterDeveloper, filterStatus])
@@ -97,17 +124,16 @@ function Calendario() {
   const days = getDaysInMonth()
   const monthName = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
-  // Estatísticas de prazos
-  const deadlineStats = React.useMemo(() => {
+  // Estatísticas de projetos
+  const projectStats = React.useMemo(() => {
     const stats = {
+      'payment-pending': 0,
       completed: 0,
-      ontime: 0,
-      urgent: 0,
-      overdue: 0
+      ontime: 0
     }
     
     filteredWorks.forEach(work => {
-      const status = getDeadlineStatus(work)
+      const status = getProjectStatus(work)
       stats[status.status as keyof typeof stats]++
     })
     
@@ -121,16 +147,16 @@ function Calendario() {
         description="Visualize projetos no calendário e acompanhe prazos de entrega."
       />
 
-      {/* Estatísticas de Prazos */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Estatísticas de Projetos */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 text-green-600 dark:bg-green-950">
-              <CheckCircle className="h-5 w-5" />
+            <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-950">
+              <DollarSign className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Concluídos</p>
-              <p className="text-2xl font-bold">{deadlineStats.completed}</p>
+              <p className="text-sm text-muted-foreground">Pagamento Pendente</p>
+              <p className="text-2xl font-bold">{projectStats['payment-pending']}</p>
             </div>
           </div>
         </div>
@@ -142,31 +168,19 @@ function Calendario() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">No Prazo</p>
-              <p className="text-2xl font-bold">{deadlineStats.ontime}</p>
+              <p className="text-2xl font-bold">{projectStats.ontime}</p>
             </div>
           </div>
         </div>
 
         <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950">
-              <AlertCircle className="h-5 w-5" />
+            <div className="p-2 rounded-lg bg-green-100 text-green-600 dark:bg-green-950">
+              <CheckCircle className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Urgentes</p>
-              <p className="text-2xl font-bold">{deadlineStats.urgent}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-card shadow-sm p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-950">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Atrasados</p>
-              <p className="text-2xl font-bold">{deadlineStats.overdue}</p>
+              <p className="text-sm text-muted-foreground">Concluídos e Pagos</p>
+              <p className="text-2xl font-bold">{projectStats.completed}</p>
             </div>
           </div>
         </div>
@@ -202,15 +216,14 @@ function Calendario() {
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="completed">Concluídos</SelectItem>
+                <SelectItem value="payment-pending">Pagamento Pendente</SelectItem>
                 <SelectItem value="ontime">No Prazo</SelectItem>
-                <SelectItem value="urgent">Urgentes</SelectItem>
-                <SelectItem value="overdue">Atrasados</SelectItem>
+                <SelectItem value="completed">Concluídos e Pagos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -253,7 +266,7 @@ function Calendario() {
                     </div>
                     <div className="space-y-1">
                       {worksForDay.slice(0, 3).map((work) => {
-                        const status = getDeadlineStatus(work)
+                        const status = getProjectStatus(work)
                         return (
                           <div
                             key={work.id}
@@ -262,10 +275,13 @@ function Calendario() {
                               status.color,
                               "text-white"
                             )}
-                            title={`${work.site_type} - ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}`}
+                            title={`${work.site_type} - ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}\nPagamento: ${work.payment_status}`}
                           >
                             <div className="font-medium truncate">{work.site_type}</div>
                             <div className="text-[10px] opacity-90 truncate">{work.developer}</div>
+                            {status.status === 'payment-pending' && (
+                              <div className="text-[10px] font-bold opacity-100">💰 Pagar</div>
+                            )}
                           </div>
                         )
                       })}
@@ -283,18 +299,14 @@ function Calendario() {
         </div>
       </div>
 
-      {/* Lista de Projetos com Prazos */}
+      {/* Lista de Projetos por Status */}
       <div className="rounded-xl border bg-card shadow-sm p-6">
-        <h3 className="text-lg font-bold mb-4">Projetos por Prazo</h3>
+        <h3 className="text-lg font-bold mb-4">Projetos por Status</h3>
         <div className="space-y-3">
           {filteredWorks
-            .map(work => ({ work, status: getDeadlineStatus(work) }))
-            .sort((a, b) => {
-              // Ordenar: atrasados, urgentes, no prazo, concluídos
-              const order = { overdue: 0, urgent: 1, ontime: 2, completed: 3 }
-              return order[a.status.status as keyof typeof order] - order[b.status.status as keyof typeof order]
-            })
-            .slice(0, 10)
+            .map(work => ({ work, status: getProjectStatus(work) }))
+            .sort((a, b) => a.status.priority - b.status.priority)
+            .slice(0, 15)
             .map(({ work, status }) => {
               return (
                 <div key={work.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
@@ -303,12 +315,18 @@ function Calendario() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium truncate">{work.site_type}</span>
-                        <Badge variant={status.status === 'completed' ? 'default' : 'destructive'} className="flex-shrink-0">
+                        <Badge 
+                          variant={status.status === 'completed' ? 'default' : status.status === 'payment-pending' ? 'secondary' : 'destructive'} 
+                          className={cn(
+                            "flex-shrink-0",
+                            status.status === 'payment-pending' && "bg-yellow-500 text-white hover:bg-yellow-600"
+                          )}
+                        >
                           {status.label}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {work.developer} • Entrega: {formatDate(work.delivery_date)}
+                        {work.developer} • Data: {formatDate(work.delivery_date)} • {work.payment_status}
                       </p>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
                         {work.domain}
@@ -319,10 +337,10 @@ function Calendario() {
                     <p className="font-bold whitespace-nowrap">{formatCurrency(parseValue(work.value))}</p>
                     <p className="text-xs text-muted-foreground whitespace-nowrap">
                       {status.status === 'completed' 
-                        ? 'Concluído' 
-                        : status.status === 'overdue'
-                        ? `${status.days}d atrasado`
-                        : `${status.days}d restantes`
+                        ? 'Pago e Concluído' 
+                        : status.status === 'payment-pending'
+                        ? `${status.days}d pendente`
+                        : 'Em andamento'
                       }
                     </p>
                   </div>
@@ -335,27 +353,31 @@ function Calendario() {
       {/* Legenda */}
       <div className="rounded-xl border bg-muted/50 p-4">
         <h4 className="font-semibold mb-3 text-sm">Legenda de Status</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span className="text-sm">Concluído (Pago)</span>
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <span className="text-sm">Pagamento Pendente</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-sm">No Prazo (&gt;7 dias)</span>
+            <span className="text-sm">No Prazo</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-orange-500" />
-            <span className="text-sm">Urgente (≤7 dias)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-sm">Atrasado</span>
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="text-sm">Concluído e Pago</span>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-3">
-          * Prazos baseados na data de entrega cadastrada para cada projeto
-        </p>
+        <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
+          <p>
+            <strong>Pagamento Pendente:</strong> Projetos finalizados e não pagos após o dia 1 do mês seguinte à data de cadastro
+          </p>
+          <p>
+            <strong>No Prazo:</strong> Projetos em andamento ou aguardando pagamento dentro do prazo
+          </p>
+          <p>
+            <strong>Concluído e Pago:</strong> Projetos finalizados e com pagamento confirmado
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -200,18 +200,35 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
     return res.status(404).json({ error: "Trabalho não encontrado" });
   }
 
+  const oldWork = existing[0];
+
+  // Se o status mudou para "Entregue" e não estava "Entregue" antes,
+  // marcar automaticamente como "Concluído" com logs
+  let finalDeveloperStatus = developer_status;
+  let completed_at = oldWork.completed_at;
+  let completed_by = oldWork.completed_by;
+
+  if (status === 'Entregue' && oldWork.status !== 'Entregue') {
+    finalDeveloperStatus = 'Concluído';
+    completed_at = new Date();
+    completed_by = `${req.user.username} (Master)`;
+    console.log(`✓ Status "Entregue" detectado - marcando automaticamente como "Concluído"`);
+    console.log(`  Completado por: ${completed_by} em ${completed_at}`);
+  }
+
   // Atualizar o registro
-  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, template = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ? WHERE id = ?";
+  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, template = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ?, completed_at = ?, completed_by = ? WHERE id = ?";
   
-  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, id]);
+  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, finalDeveloperStatus, payment_status, observations, completed_at, completed_by, id]);
   
   console.log(`✓ Projeto atualizado: ID ${id} - ${domain}`);
   console.log(`  Template: ${template || 'NULL'}`);
+  console.log(`  Status: ${status} | Developer Status: ${finalDeveloperStatus}`);
   
   res.json({
     success: true,
     message: "Trabalho atualizado com sucesso",
-    updatedWork: { id, developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations }
+    updatedWork: { id, developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status: finalDeveloperStatus, payment_status, observations, completed_at, completed_by }
   });
 }));
 
@@ -226,12 +243,12 @@ app.patch("/works/:id/mark-paid", authenticateToken, requireMaster, asyncHandler
   res.json({ success: true, message: "Projeto marcado como pago" });
 }));
 
-// PATCH para desenvolvedor marcar como concluído (apenas seus próprios projetos)
+// PATCH para marcar como concluído (Master ou Desenvolvedor responsável)
 app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { developer_status } = req.body;
   
-  // Verificar se o projeto existe e se pertence ao desenvolvedor (para usuários padrão)
+  // Verificar se o projeto existe
   const [existing] = await pool.execute("SELECT * FROM works WHERE id = ?", [id]);
   
   if (existing.length === 0) {
@@ -240,8 +257,11 @@ app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (re
   
   const work = existing[0];
   
-  // Se for usuário padrão, só pode alterar seus próprios projetos
-  if (req.user.role === 'standard' && work.developer !== req.user.developerName) {
+  // Verificar permissões: Master pode alterar qualquer projeto, Desenvolvedor apenas os seus
+  const isMaster = req.user.role === 'master';
+  const isDeveloperOwner = req.user.role === 'standard' && work.developer === req.user.developerName;
+  
+  if (!isMaster && !isDeveloperOwner) {
     return res.status(403).json({ error: "Você só pode alterar o status dos seus próprios projetos" });
   }
   
@@ -250,22 +270,29 @@ app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (re
     return res.status(400).json({ error: "Status inválido. Use 'Em Andamento' ou 'Concluído'" });
   }
   
-  // Se está marcando como concluído, salvar a data/hora atual
-  // Se está voltando para "Em Andamento", limpar a data
+  // Se está marcando como concluído, salvar a data/hora atual e quem completou
+  // Se está voltando para "Em Andamento", limpar a data e o responsável
   const completed_at = developer_status === 'Concluído' ? new Date() : null;
+  const completed_by = developer_status === 'Concluído' 
+    ? (isMaster ? `${req.user.username} (Master)` : req.user.developerName)
+    : null;
   
   await pool.execute(
-    "UPDATE works SET developer_status = ?, completed_at = ? WHERE id = ?", 
-    [developer_status, completed_at, id]
+    "UPDATE works SET developer_status = ?, completed_at = ?, completed_by = ? WHERE id = ?", 
+    [developer_status, completed_at, completed_by, id]
   );
   
-  console.log(`✓ Status do desenvolvedor atualizado: ID ${id} - ${developer_status} por ${req.user.username}`);
+  console.log(`✓ Status atualizado: ID ${id} - ${developer_status} por ${req.user.username} (${req.user.role})`);
+  if (completed_by) {
+    console.log(`  Completado por: ${completed_by} em ${completed_at}`);
+  }
   
   res.json({ 
     success: true, 
     message: `Projeto marcado como ${developer_status.toLowerCase()}`,
     developer_status,
-    completed_at 
+    completed_at,
+    completed_by
   });
 }));
 

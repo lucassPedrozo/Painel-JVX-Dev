@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { FormField } from "@/components/common"
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
-import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES, DELIVERY_STATUS } from '@/lib/constants'
+import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES } from '@/lib/constants'
 import { normalizeUrl } from '@/lib/utils'
 
 interface WorkDialogProps {
@@ -28,7 +28,6 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
   const [siteType, setSiteType] = React.useState("Site Institucional")
   const [template, setTemplate] = React.useState("")
   const [deliveryDate, setDeliveryDate] = React.useState("")
-  const [status, setStatus] = React.useState("Não Entregue")
   const [paymentStatus, setPaymentStatus] = React.useState("Não Pago")
   const [observations, setObservations] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
@@ -47,7 +46,6 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
     setSiteType("Site Institucional")
     setTemplate("")
     setDeliveryDate("")
-    setStatus("Não Entregue")
     setPaymentStatus("Não Pago")
     setObservations("")
   }
@@ -75,7 +73,7 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
         delivery_date: timestamp,
         delivery_month: month.charAt(0).toUpperCase() + month.slice(1),
         delivery_year: year,
-        status,
+        status: 'Não Entregue',
         developer_status: 'Em Andamento',
         payment_status: paymentStatus,
         observations
@@ -111,40 +109,59 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
-          <form onSubmit={handleSubmit} className="space-y-4" id="work-form">
-            <FormField label="Desenvolvedor" required>
-              <Input
-                value={developer}
-                onChange={(e) => setDeveloper(e.target.value)}
-                placeholder="Nome do desenvolvedor"
-                required
-              />
-            </FormField>
+          <form onSubmit={handleSubmit} className="space-y-5 py-1" id="work-form">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Desenvolvedor" required>
+                <Input
+                  value={developer}
+                  onChange={(e) => setDeveloper(e.target.value)}
+                  placeholder="Nome do desenvolvedor"
+                  className="h-10"
+                  required
+                />
+              </FormField>
 
-            <FormField label="Tipo de Prazo" required>
-              <Select value={deadlineType} onValueChange={setDeadlineType} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o prazo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEADLINE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
+              <FormField label="Tipo de Prazo" required>
+                <Select value={deadlineType} onValueChange={setDeadlineType} required>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o prazo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEADLINE_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
 
-            <FormField label="Valor (R$)" required>
-              <Input
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="200.00"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-              />
-            </FormField>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Valor (R$)" required>
+                <Input
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder="200.00"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-10"
+                  required
+                />
+              </FormField>
+
+              <FormField label="Data de Início" required>
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                  className="h-10"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Data de início do desenvolvimento
+                </p>
+              </FormField>
+            </div>
 
             <FormField label="Domínio/URL" required>
               <Input
@@ -156,21 +173,35 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
                 }}
                 placeholder="https://exemplo.com"
                 type="url"
+                className="h-10"
                 required
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 URL será automaticamente formatada para HTTPS
               </p>
             </FormField>
 
             <FormField label="Tipo de Site" required>
               <Select value={siteType} onValueChange={setSiteType} required>
-                <SelectTrigger>
+                <SelectTrigger className="h-10">
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   {SITE_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label="Status do Pagamento" required>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus} required>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_STATUS.map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -188,54 +219,20 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
                 }}
                 placeholder="https://themeforest.net/item/..."
                 type="url"
+                className="h-10"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 URL do template utilizado (ThemeForest, Envato, etc)
               </p>
             </FormField>
 
-            <FormField label="Data de Entrega" required>
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
-                required
-              />
-            </FormField>
-
-            <FormField label="Status de Entrega" required>
-              <Select value={status} onValueChange={setStatus} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DELIVERY_STATUS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-            <FormField label="Status do Pagamento" required>
-              <Select value={paymentStatus} onValueChange={setPaymentStatus} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_STATUS.map((status) => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-            <FormField label="Observações ou Template">
+            <FormField label="Observações">
               <Textarea
                 value={observations}
                 onChange={(e) => setObservations(e.target.value)}
-                placeholder="Adicione observações sobre o projeto ou link do template..."
-                rows={3}
-                className="resize-none mb-4"
+                placeholder="Adicione observações sobre o projeto..."
+                rows={4}
+                className="resize-none"
               />
             </FormField>
           </form>
