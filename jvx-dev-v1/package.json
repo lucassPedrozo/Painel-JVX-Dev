@@ -33,10 +33,11 @@
     "preview": "vite preview",
     "server": "node server.js",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
-    "import": "node scripts/importar-csv-direto.js",
-    "verify": "node scripts/verificar-dados.js",
-    "test-db": "node scripts/testar-conexao-db.js",
-    "populate": "node scripts/popular-banco-completo.js"
+    "import": "node scripts/import/importar-csv-direto.js",
+    "verify": "node scripts/database/verificar-dados.js",
+    "test-db": "node scripts/database/testar-conexao-db.js",
+    "test-api": "node scripts/test/testar-api.js",
+    "populate": "node scripts/database/popular-banco-completo.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

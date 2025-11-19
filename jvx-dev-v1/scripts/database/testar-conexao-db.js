@@ -37,7 +37,7 @@ async function testarConexao() {
     if (!worksdbExists) {
       console.log('\n⚠ Banco "worksdb" NÃO encontrado!');
       console.log('\nPara criar o banco, execute:');
-      console.log('  mysql -u root -p < database-init-clean.sql');
+      console.log('  mysql -u root -p < database/database-init-clean.sql');
       console.log('\nOu execute no MySQL:');
       console.log('  CREATE DATABASE worksdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
     } else {
@@ -52,7 +52,7 @@ async function testarConexao() {
       if (tables.length === 0) {
         console.log('⚠ Nenhuma tabela encontrada no banco "worksdb"!');
         console.log('\nPara criar as tabelas, execute:');
-        console.log('  mysql -u root -p worksdb < database-init-clean.sql');
+        console.log('  mysql -u root -p worksdb < database/database-init-clean.sql');
       } else {
         console.log('Tabelas encontradas:');
         tables.forEach(table => {

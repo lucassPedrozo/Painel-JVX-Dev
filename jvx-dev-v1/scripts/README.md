@@ -1,236 +1,204 @@
-# 🔧 Scripts Utilitários
+# 📦 Scripts Utilitários
 
-Esta pasta contém scripts auxiliares para gerenciamento do banco de dados e importação de dados.
-
-## 📜 Scripts Disponíveis
-
-### 📥 importar-csv-direto.js
-**Uso**: `npm run import`
-
-Importa dados de um arquivo CSV diretamente no banco de dados.
-
-**Características:**
-- Importação em lote otimizada
-- Validação de dados
-- Tratamento de erros
-- Progresso em tempo real
-- Suporte a grandes volumes (100+ registros)
-
-**Quando usar:**
-- Importação inicial de dados
-- Migração de dados de outro sistema
-- Backup e restauração
-- Grandes volumes de dados
-
-**Arquivo CSV esperado:**
-- Localização: `database/exemplo-importacao.csv`
-- Formato: CSV com cabeçalho
-- Encoding: UTF-8
+Scripts organizados por categoria para facilitar o gerenciamento do projeto.
 
 ---
 
-### ✅ verificar-dados.js
-**Uso**: `npm run verify`
+## 📁 Estrutura
 
-Verifica a integridade e consistência dos dados no banco.
-
-**O que verifica:**
-- Total de registros
-- Primeiros registros (amostra)
-- Estatísticas gerais
-- Distribuição por desenvolvedor
-- Distribuição por ano
-- Valores totais e médios
-
-**Quando usar:**
-- Após importação de dados
-- Para auditoria de dados
-- Verificação de integridade
-- Análise rápida do banco
+```
+scripts/
+├── database/              # Scripts de banco de dados
+│   ├── testar-conexao-db.js      # Testa conexão com MySQL
+│   ├── popular-banco-completo.js # Popula banco com dados de exemplo
+│   └── verificar-dados.js        # Verifica integridade dos dados
+├── import/                # Scripts de importação
+│   └── importar-csv-direto.js    # Importa dados de CSV
+└── test/                  # Scripts de teste
+    └── testar-api.js             # Testa endpoints da API
+```
 
 ---
 
-### 🔌 testar-conexao-db.js
-**Uso**: `npm run test-db`
+## 🗄️ Scripts de Banco de Dados
 
-Testa a conexão com o banco de dados MySQL.
+### testar-conexao-db.js
+Testa a conexão com o banco de dados MySQL e verifica a estrutura.
 
-**O que testa:**
-- Conexão com MySQL
-- Existência do banco `worksdb`
-- Tabelas criadas
-- Contagem de registros por tabela
-
-**Quando usar:**
-- Antes de iniciar o projeto
-- Após configurar o .env
-- Para diagnosticar problemas de conexão
-- Verificar se o MySQL está rodando
-
----
-
-### 🎲 popular-banco-completo.js
-**Uso**: `npm run populate`
-
-Popula o banco de dados com dados de exemplo para desenvolvimento e testes.
-
-**O que cria:**
-- Usuários de exemplo (master e desenvolvedores)
-- Desenvolvedores com informações completas
-- Projetos de exemplo (2024 e 2025)
-- Diferentes status de projetos
-- Dados realistas para testes
-
-**Dados criados:**
-- 3 usuários (1 master + 2 desenvolvedores)
-- 3 desenvolvedores cadastrados
-- ~13 projetos de exemplo
-- Projetos com diferentes status
-
-**Quando usar:**
-- Primeira configuração do projeto
-- Ambiente de desenvolvimento
-- Testes de funcionalidades
-- Demonstrações
-
-**⚠️ Atenção:** Este script limpa os dados existentes antes de popular!
-
----
-
-## 🚀 Como Usar
-
-### Execução via NPM (Recomendado)
 ```bash
-# Importar CSV
-npm run import
+npm run test-db
+```
 
-# Verificar dados
+**O que faz:**
+- Testa conexão com MySQL
+- Lista bancos de dados disponíveis
+- Verifica se o banco `worksdb` existe
+- Lista tabelas e contagem de registros
+
+---
+
+### popular-banco-completo.js
+Popula o banco de dados com dados de exemplo para testes.
+
+```bash
+npm run populate
+```
+
+**O que faz:**
+- Limpa tabelas existentes
+- Cria usuários de teste (jvxadmin, leandro.dev, heron.dev)
+- Cria desenvolvedores de exemplo
+- Insere projetos de exemplo (2024 e 2025)
+- Exibe estatísticas finais
+
+**Usuários criados:**
+- Master: jvxadmin / admin123
+- Dev: leandro.dev / dev123
+- Dev: heron.dev / dev123
+
+---
+
+### verificar-dados.js
+Verifica a integridade e exibe estatísticas dos dados no banco.
+
+```bash
 npm run verify
+```
 
+**O que faz:**
+- Conta total de registros
+- Exibe primeiros 5 registros
+- Mostra estatísticas gerais (entregues, pagos, valores)
+- Lista top 10 desenvolvedores
+- Agrupa projetos por ano
+
+---
+
+## 📥 Scripts de Importação
+
+### importar-csv-direto.js
+Importa dados de arquivo CSV diretamente no banco de dados.
+
+```bash
+npm run import
+```
+
+**O que faz:**
+- Lê arquivo `database/exemplo-importacao.csv`
+- Valida formato dos dados
+- Limpa tabela works (opcional)
+- Importa registros com validação
+- Exibe progresso e erros
+- Mostra estatísticas finais
+
+**Formato do CSV:**
+```csv
+Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template
+Alexandre,Normal,"R$ 200,00",exemplo.com.br,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,
+```
+
+---
+
+## 🧪 Scripts de Teste
+
+### testar-api.js
+Testa os endpoints da API REST.
+
+```bash
+npm run test-api
+```
+
+**O que faz:**
+- Testa endpoint de login
+- Valida token JWT
+- Testa busca de projetos
+- Exibe dados do primeiro projeto
+
+**Pré-requisito:** O servidor deve estar rodando (`npm run server`)
+
+---
+
+## 🔧 Como Usar
+
+### Executar via npm
+```bash
 # Testar conexão
 npm run test-db
 
 # Popular banco
 npm run populate
-```
-
-### Execução Direta
-```bash
-# Importar CSV
-node scripts/importar-csv-direto.js
 
 # Verificar dados
-node scripts/verificar-dados.js
+npm run verify
 
-# Testar conexão
-node scripts/testar-conexao-db.js
+# Importar CSV
+npm run import
 
-# Popular banco
-node scripts/popular-banco-completo.js
+# Testar API
+npm run test-api
 ```
 
-## 📋 Pré-requisitos
+### Executar diretamente
+```bash
+# Testar conexão
+node scripts/database/testar-conexao-db.js
 
-Todos os scripts requerem:
-- Node.js instalado
-- MySQL rodando
-- Arquivo `.env` configurado
-- Dependências instaladas (`npm install`)
+# Popular banco
+node scripts/database/popular-banco-completo.js
+
+# Verificar dados
+node scripts/database/verificar-dados.js
+
+# Importar CSV
+node scripts/import/importar-csv-direto.js
+
+# Testar API
+node scripts/test/testar-api.js
+```
+
+---
 
 ## ⚙️ Configuração
 
-Os scripts usam as variáveis de ambiente do arquivo `.env`:
+Todos os scripts utilizam as variáveis de ambiente do arquivo `.env`:
 
 ```env
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=sua_senha
+DB_PASSWORD=
 DB_NAME=worksdb
+PORT=3001
+JWT_SECRET=sua_chave_secreta
 ```
-
-## 🔄 Fluxo Recomendado
-
-### Primeira Instalação
-1. `npm run test-db` - Verificar conexão
-2. `npm run populate` - Popular com dados de exemplo
-3. `npm run verify` - Verificar dados criados
-
-### Importação de Dados Reais
-1. `npm run test-db` - Verificar conexão
-2. Colocar CSV em `public/`
-3. `npm run import` - Importar dados
-4. `npm run verify` - Verificar importação
-
-### Manutenção
-1. `npm run verify` - Verificar estado atual
-2. `npm run test-db` - Testar conexão periodicamente
-
-## 🐛 Solução de Problemas
-
-### Erro: "Banco de dados não encontrado"
-```bash
-# Criar banco manualmente
-mysql -u root -p < database/database-init-clean.sql
-```
-
-### Erro: "Conexão recusada"
-- Verificar se MySQL está rodando
-- Verificar credenciais no `.env`
-- Verificar porta 3306
-
-### Erro: "Arquivo CSV não encontrado"
-- Verificar se o arquivo está em `public/`
-- Verificar nome do arquivo
-- Verificar encoding (UTF-8)
-
-### Erro: "Permissão negada"
-- Verificar permissões do usuário MySQL
-- Verificar se o usuário tem acesso ao banco
-
-## 📊 Formato do CSV
-
-Para o script de importação, o CSV deve ter o seguinte formato:
-
-```csv
-Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template
-Alexandre,Normal,"R$ 200,00",exemplo.com.br,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,Observações aqui
-```
-
-**Campos:**
-1. Desenvolvedor (obrigatório)
-2. Prazo: "Normal" ou "Prazo Reduzido"
-3. Valor R$: formato "R$ 200,00"
-4. Domínio (obrigatório)
-5. Tipo de Site
-6. Data Entrega: DD/MM/YYYY
-7. Mês: nome do mês
-8. Ano: YYYY
-9. Status: "Entregue" ou "Não Entregue"
-10. Pagamento: "Pago" ou "Não Pago"
-11. Observações: texto livre
-
-## 🔒 Segurança
-
-- Scripts usam conexões seguras com o banco
-- Senhas são criptografadas com bcrypt
-- Validação de dados antes de inserir
-- Transações para garantir integridade
-
-## 📝 Logs
-
-Todos os scripts exibem logs detalhados:
-- ✅ Operações bem-sucedidas
-- ❌ Erros encontrados
-- 📊 Estatísticas e contadores
-- ⚠️ Avisos importantes
-
-## 🔗 Links Relacionados
-
-- [Documentação Principal](../README.md)
-- [Estrutura do Banco](../database/)
-- [Documentação Completa](../docs/)
 
 ---
 
-**Última Atualização**: Novembro 2025  
-**Versão**: 2.0.0
+## 🐛 Solução de Problemas
+
+### Erro: "Cannot find module"
+```bash
+npm install
+```
+
+### Erro: "Connection refused"
+- Verifique se o MySQL está rodando (XAMPP)
+- Confirme as credenciais no `.env`
+
+### Erro: "Database not found"
+```bash
+# Execute o script de inicialização:
+mysql -u root -p < database/database-init-clean.sql
+```
+
+---
+
+## 📝 Notas
+
+- Todos os scripts usam ES Modules (`import/export`)
+- Requerem Node.js ≥16.0.0
+- Utilizam `dotenv` para variáveis de ambiente
+- Exibem mensagens coloridas e formatadas no console
+
+---
+
+Para mais informações, consulte a [documentação completa](../docs/GUIA-COMPLETO.md).

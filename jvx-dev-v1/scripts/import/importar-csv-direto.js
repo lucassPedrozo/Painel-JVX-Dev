@@ -34,7 +34,7 @@ async function importarCSV() {
     
     // Ler o CSV
     console.log('\n2. Lendo arquivo CSV...');
-    const csvPath = path.join(__dirname, '..', 'database', 'exemplo-importacao.csv');
+    const csvPath = path.join(__dirname, '..', '..', 'database', 'exemplo-importacao.csv');
     const csvContent = fs.readFileSync(csvPath, { encoding: 'utf-8' });
     
     // Parse CSV
