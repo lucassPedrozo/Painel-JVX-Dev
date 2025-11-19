@@ -5,7 +5,6 @@
 ### 1️⃣ Quero começar AGORA! (5 minutos)
 
 ```
-📄 Abra: QUICK-START.txt
 🖱️ Execute: iniciar-projeto.bat
 🌐 Acesse: http://localhost:5173
 ```
@@ -17,7 +16,7 @@
 ### 2️⃣ Primeira vez instalando (10-15 minutos)
 
 ```
-1. Leia: INICIO-RAPIDO.md
+1. Leia: docs/GUIA-INICIO-RAPIDO.md
 2. Siga os 3 passos
 3. Use: CHECKLIST-INSTALACAO.md para validar
 ```
@@ -38,7 +37,7 @@
 
 ```
 1. Execute: diagnostico.bat
-2. Execute: node testar-api.js
+2. Execute: node scripts/testar-api.js
 3. Consulte: TESTE-SISTEMA.md
 4. Consulte: SOLUCAO-PROBLEMAS.md
 ```
@@ -59,9 +58,8 @@
 ## 📚 Mapa Rápido de Documentação
 
 ### 🚀 Para Começar
-- **QUICK-START.txt** - Card visual de 4 passos
-- **INICIO-RAPIDO.md** - Guia de 3 passos
-- **iniciar-projeto.bat** - Script automático
+- **docs/GUIA-INICIO-RAPIDO.md** - Guia de 3 passos (recomendado)
+- **iniciar-projeto.bat** - Script automático de inicialização
 
 ### 📖 Guias Completos
 - **COMO-USAR.md** - Manual completo
@@ -107,9 +105,9 @@ npm run populate
 
 ### Iniciante
 ```
-1. QUICK-START.txt (5 min)
-2. INICIO-RAPIDO.md (10 min)
-3. Explorar o sistema
+1. docs/GUIA-INICIO-RAPIDO.md (10 min)
+2. Explorar o sistema
+3. Testar funcionalidades básicas
 ```
 
 ### Intermediário

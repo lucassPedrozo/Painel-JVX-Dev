@@ -38,8 +38,9 @@ export function DeveloperStatusButton({ work, onUpdate }: DeveloperStatusButtonP
       )
       
       onUpdate?.()
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao atualizar status')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao atualizar status'
+      toast.error(message)
     } finally {
       setLoading(false)
     }

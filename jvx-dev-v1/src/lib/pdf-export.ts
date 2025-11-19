@@ -1,16 +1,7 @@
 import { formatCurrency, formatDate } from './utils'
+import type { Work } from '@/types'
 
-interface PDFWork {
-  id?: number
-  site_type: string
-  payment_status: string
-  value: number | string
-  domain: string
-  delivery_date: string | number
-  developer?: string
-  deadline_type?: string
-  observations?: string
-}
+type PDFWork = Work
 
 export function generatePDF(works: PDFWork[], title: string = 'Relatório de Trabalhos', autoPrint: boolean = true) {
   // Criar uma nova janela para o PDF
@@ -294,18 +285,18 @@ export function generatePDF(works: PDFWork[], title: string = 'Relatório de Tra
             const value = typeof work.value === 'string' 
               ? parseFloat(work.value.replace(/[^\d,.-]/g, '').replace(',', '.'))
               : work.value
-            const isPaid = work.paymentStatus?.toLowerCase() === 'pago'
+            const isPaid = work.payment_status?.toLowerCase() === 'pago'
             
             return `
               <tr>
-                <td style="white-space: nowrap;">${formatDate(work.date)}</td>
-                <td>${work.typeWork}</td>
-                <td class="url-cell"><a href="${work.url}" class="url-link" target="_blank" title="${work.url}">${work.url}</a></td>
+                <td style="white-space: nowrap;">${formatDate(work.delivery_date)}</td>
+                <td>${work.site_type}</td>
+                <td class="url-cell"><a href="${work.domain}" class="url-link" target="_blank" title="${work.domain}">${work.domain}</a></td>
                 <td>${work.developer || '-'}</td>
                 <td class="${isPaid ? 'value-positive' : 'value-negative'}" style="white-space: nowrap;">${formatCurrency(value)}</td>
                 <td>
                   <span class="badge ${isPaid ? 'badge-pago' : 'badge-pendente'}">
-                    ${work.paymentStatus}
+                    ${work.payment_status}
                   </span>
                 </td>
               </tr>

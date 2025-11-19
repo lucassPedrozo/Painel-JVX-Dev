@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorks } from '@/contexts/WorksContext'
-import { PageHeader } from '@/components/PageHeader'
+import { PageHeader } from '@/components/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -70,7 +70,7 @@ function Configuracoes() {
           const dateStr = `${day}/${month}/${year}`
 
           // Formatar valor
-          const valueNum = typeof work.value === 'number' ? work.value : parseFloat(work.value.toString()) || 0
+          const valueNum = typeof work.value === 'number' ? work.value : parseFloat(String(work.value)) || 0
           const valueStr = `R$ ${valueNum.toFixed(2).replace('.', ',')}`
 
           return [
@@ -139,9 +139,10 @@ function Configuracoes() {
         toast.error('Falha na importação')
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao importar:', error)
-      toast.error(error.message || 'Erro ao processar arquivo CSV')
+      const message = error instanceof Error ? error.message : 'Erro ao processar arquivo CSV'
+      toast.error(message)
     } finally {
       setImporting(false)
       event.target.value = ''
@@ -185,9 +186,10 @@ function Configuracoes() {
       setClearPassword('')
       setShowClearDialog(false)
       reload()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao limpar banco:', error)
-      toast.error(error.message || 'Erro ao limpar banco de dados')
+      const message = error instanceof Error ? error.message : 'Erro ao limpar banco de dados'
+      toast.error(message)
     } finally {
       setClearing(false)
     }

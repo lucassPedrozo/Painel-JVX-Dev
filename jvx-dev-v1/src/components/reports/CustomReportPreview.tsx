@@ -6,14 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 interface Column {
   key: string
   label: string
-  format?: (value: any) => string
+  format?: (value: unknown) => string
 }
 
 interface CustomReportPreviewProps {
   isOpen: boolean
   onClose: () => void
   title: string
-  data: any[]
+  data: Record<string, unknown>[]
   columns: Column[]
   onDownloadCSV: () => void
 }
@@ -70,7 +70,7 @@ export function CustomReportPreview({
                         <td key={col.key} className="px-4 py-3 text-sm">
                           {col.format
                             ? col.format(row[col.key])
-                            : row[col.key] || '-'}
+                            : String(row[col.key] || '-')}
                         </td>
                       ))}
                     </tr>

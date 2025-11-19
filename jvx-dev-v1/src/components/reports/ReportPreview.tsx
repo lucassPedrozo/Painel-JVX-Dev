@@ -5,18 +5,7 @@ import { Download, FileText, X } from 'lucide-react'
 import { formatCurrency, formatDate, parseValue } from '@/lib/utils'
 import { generatePDF } from '@/lib/pdf-export'
 import { toast } from 'sonner'
-
-interface Work {
-  id?: number
-  typeWork: string
-  paymentStatus: string
-  value: number | string
-  url: string
-  date: string | number
-  developer?: string
-  template?: string
-  observations?: string
-}
+import type { Work } from '@/types'
 
 interface ReportPreviewProps {
   isOpen: boolean
@@ -29,11 +18,11 @@ interface ReportPreviewProps {
 export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: ReportPreviewProps) {
   const stats = React.useMemo(() => {
     const totalWorks = works.length
-    const paidWorks = works.filter(w => w.paymentStatus?.toLowerCase() === 'pago').length
+    const paidWorks = works.filter(w => w.payment_status?.toLowerCase() === 'pago').length
     const pendingWorks = totalWorks - paidWorks
     const totalValue = works.reduce((sum, w) => sum + parseValue(w.value), 0)
     const paidValue = works
-      .filter(w => w.paymentStatus?.toLowerCase() === 'pago')
+      .filter(w => w.payment_status?.toLowerCase() === 'pago')
       .reduce((sum, w) => sum + parseValue(w.value), 0)
     const pendingValue = totalValue - paidValue
 
@@ -80,15 +69,15 @@ export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: 
             {/* Lista de Trabalhos */}
             <div className="space-y-3">
               {works.map((work, index) => {
-                const isPaid = work.paymentStatus?.toLowerCase() === 'pago'
+                const isPaid = work.payment_status?.toLowerCase() === 'pago'
                 return (
                   <div key={index} className="rounded-xl border bg-card p-4 hover:shadow-md transition-shadow">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Data / Tipo */}
                       <div className="min-w-0">
                         <div className="text-xs text-muted-foreground mb-1">Data / Tipo</div>
-                        <div className="text-sm font-semibold">{formatDate(work.date)}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{work.typeWork}</div>
+                        <div className="text-sm font-semibold">{formatDate(work.delivery_date)}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{work.site_type}</div>
                       </div>
 
                       {/* Desenvolvedor */}
@@ -107,14 +96,14 @@ export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                           }`}>
-                          {work.paymentStatus}
+                          {work.payment_status}
                         </span>
                       </div>
 
                       {/* URL */}
                       <div className="min-w-0 sm:col-span-3">
-                        <div className="text-xs text-muted-foreground mb-1">URL</div>
-                        <div className="text-sm truncate text-muted-foreground" title={work.url}>{work.url}</div>
+                        <div className="text-xs text-muted-foreground mb-1">Domínio</div>
+                        <div className="text-sm truncate text-muted-foreground" title={work.domain}>{work.domain}</div>
                       </div>
 
                       {/* Template (se existir) */}

@@ -23,7 +23,7 @@ Importa dados de um arquivo CSV diretamente no banco de dados.
 - Grandes volumes de dados
 
 **Arquivo CSV esperado:**
-- Localização: `public/Relatório de Desenvolvimento - Desenvolvimento.csv`
+- Localização: `database/exemplo-importacao.csv`
 - Formato: CSV com cabeçalho
 - Encoding: UTF-8
 

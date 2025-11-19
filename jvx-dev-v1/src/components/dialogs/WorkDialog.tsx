@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FormField } from "@/components/FormField"
+import { FormField } from "@/components/common"
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES, DELIVERY_STATUS } from '@/lib/constants'
@@ -20,10 +20,7 @@ interface WorkDialogProps {
 export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
   const { user } = useAuth()
   
-  // Só mostrar para usuários master
-  if (!user || user.role !== 'master') {
-    return null
-  }
+  // Hooks devem ser chamados antes de qualquer return condicional
   const [developer, setDeveloper] = React.useState("")
   const [deadlineType, setDeadlineType] = React.useState("Normal")
   const [value, setValue] = React.useState("")
@@ -36,6 +33,11 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
   const [observations, setObservations] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  
+  // Só mostrar para usuários master
+  if (!user || user.role !== 'master') {
+    return null
+  }
 
   const resetForm = () => {
     setDeveloper("")

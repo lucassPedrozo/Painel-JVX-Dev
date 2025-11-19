@@ -34,7 +34,14 @@ export function TechnologyStats({ works }: TechnologyStatsProps) {
       .sort((a, b) => b.projetos - a.projetos)
   }, [works])
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface TechData {
+    name: string
+    projetos: number
+    valor: number
+    average: number
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: TechData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

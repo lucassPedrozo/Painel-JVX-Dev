@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { RatingStars } from '@/components/RatingStars'
+import { RatingStars } from '@/components/common'
 import { type Work } from '@/lib/api'
 import { Star } from 'lucide-react'
 
@@ -20,12 +20,13 @@ interface RatingDialogProps {
   }) => void
 }
 
-export function RatingDialog({ work, open, onOpenChange, onSave }: RatingDialogProps) {
-  const [aparencia, setAparencia] = useState(work?.rating_aparencia || 0)
-  const [complexidade, setComplexidade] = useState(work?.rating_complexidade || 0)
-  const [satisfacao, setSatisfacao] = useState(work?.rating_satisfacao || 0)
-  const [material, setMaterial] = useState(work?.rating_material || 0)
-  const [observacoes, setObservacoes] = useState(work?.rating_observacoes || '')
+export function RatingDialog({ open, onOpenChange, onSave }: RatingDialogProps) {
+  // Sistema de rating temporariamente desabilitado
+  const [aparencia, setAparencia] = useState(0)
+  const [complexidade, setComplexidade] = useState(0)
+  const [satisfacao, setSatisfacao] = useState(0)
+  const [material, setMaterial] = useState(0)
+  const [observacoes, setObservacoes] = useState('')
 
   const handleSave = () => {
     if (aparencia === 0 || complexidade === 0 || satisfacao === 0 || material === 0) {

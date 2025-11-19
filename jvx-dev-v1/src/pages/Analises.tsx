@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { PageHeader } from '@/components/PageHeader'
+import { PageHeader } from '@/components/common'
 import { useWorks } from '@/contexts/WorksContext'
 import { Card } from '@/components/ui/card'
 import { 
@@ -211,7 +211,26 @@ function Analises() {
   // TOOLTIPS CUSTOMIZADOS
   // ============================================
 
-  const MonthlyTooltip = ({ active, payload }: any) => {
+  interface MonthlyData {
+    month: string
+    total: number
+    entregues: number
+    pagos: number
+    receita: number
+    receitaPaga: number
+  }
+
+  interface DeveloperData {
+    fullName: string
+    total: number
+    entregues: number
+    pagos: number
+    receita: number
+    receitaPaga: number
+    ticketMedio: number
+  }
+
+  const MonthlyTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: MonthlyData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -228,7 +247,7 @@ function Analises() {
     return null
   }
 
-  const DeveloperTooltip = ({ active, payload }: any) => {
+  const DeveloperTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: DeveloperData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -246,15 +265,22 @@ function Analises() {
     return null
   }
 
-  const TypeTooltip = ({ active, payload }: any) => {
+  interface TypeData {
+    name: string
+    value: number
+    percentage: number
+    receita: number
+  }
+
+  const TypeTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: TypeData }> }) => {
     if (active && payload && payload.length) {
-      const data = payload[0]
+      const data = payload[0].payload
       return (
         <div className="bg-card border rounded-lg shadow-lg p-3">
           <p className="font-semibold text-sm mb-2">{data.name}</p>
           <p className="text-xs">Quantidade: {data.value} projetos</p>
-          <p className="text-xs">Percentual: {data.payload.percentage.toFixed(1)}%</p>
-          <p className="text-xs font-semibold mt-1">Receita: {formatCurrency(data.payload.receita)}</p>
+          <p className="text-xs">Percentual: {data.percentage.toFixed(1)}%</p>
+          <p className="text-xs font-semibold mt-1">Receita: {formatCurrency(data.receita)}</p>
         </div>
       )
     }

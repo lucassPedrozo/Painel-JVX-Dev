@@ -1,12 +1,6 @@
 import * as React from 'react'
-import { api, type Work } from '@/lib/api'
-
-interface WorksContextType {
-  works: Work[]
-  loading: boolean
-  error: Error | null
-  reload: () => void
-}
+import { api } from '@/lib/api'
+import type { Work, WorksContextType } from '@/types'
 
 const WorksContext = React.createContext<WorksContextType | undefined>(undefined)
 

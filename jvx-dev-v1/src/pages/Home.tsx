@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, TrendingUp, DollarSign, Users, BarChart3, Package, CheckCircle } from 'lucide-react'
-import { PageHeader } from '@/components/PageHeader'
+import { PageHeader } from '@/components/common'
 import { useWorks } from '@/contexts/WorksContext'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'

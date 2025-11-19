@@ -1,12 +1,12 @@
 import * as React from "react"
-import { PageHeader } from "@/components/PageHeader"
+import { PageHeader } from "@/components/common"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useWorks } from "@/contexts/WorksContext"
 import { parseValue, formatCurrency } from "@/lib/utils"
 import { Eye, EyeOff, User, Briefcase, Clock, Info } from "lucide-react"
-import { DeveloperInfoDialog } from "@/components/DeveloperInfoDialog"
+import { DeveloperInfoDialog } from "@/components/dialogs"
 import { cn } from "@/lib/utils"
 
 interface DeveloperStats {
@@ -43,7 +43,7 @@ function Equipe() {
       const value = parseValue(work.value)
       dev.totalValue += value
 
-      if (work.paymentStatus && work.paymentStatus.toLowerCase() !== "pago") {
+      if (work.payment_status && work.payment_status.toLowerCase() !== "pago") {
         dev.activeProjects++
         dev.pendingValue += value
       }
@@ -60,7 +60,7 @@ function Equipe() {
   // Atualizar quando a lista de desenvolvedores mudar
   React.useEffect(() => {
     setHiddenValues(new Set(developers.map((d) => d.name)))
-  }, [developers.length])
+  }, [developers])
 
   const toggleValueVisibility = (devName: string) => {
     setHiddenValues((prev) => {

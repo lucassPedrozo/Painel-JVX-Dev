@@ -55,8 +55,9 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
       )
       
       onUpdate?.()
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao atualizar status')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao atualizar status'
+      toast.error(message)
     } finally {
       setLoading(false)
     }

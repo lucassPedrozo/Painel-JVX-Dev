@@ -10,7 +10,7 @@ Sistema completo para gerenciamento de projetos de desenvolvimento web, com cont
 
 **Quer começar agora?** Siga um destes guias:
 
-- 📖 **[INICIO-RAPIDO.md](INICIO-RAPIDO.md)** - 3 passos para começar (recomendado)
+- 📖 **[docs/GUIA-INICIO-RAPIDO.md](docs/GUIA-INICIO-RAPIDO.md)** - 3 passos para começar (recomendado)
 - 📚 **[COMO-USAR.md](COMO-USAR.md)** - Guia completo de instalação e uso
 - ✅ **[CHECKLIST-INSTALACAO.md](CHECKLIST-INSTALACAO.md)** - Verificação passo a passo
 
@@ -294,35 +294,41 @@ VITE_API_URL=https://api.seu-dominio.com
 ```
 jvx-desenvolvimento/
 ├── database/                    # Scripts de banco de dados
-│   └── database-init-clean.sql # Script de inicialização
+│   ├── database-init-clean.sql # Script de inicialização
+│   ├── exemplo-importacao.csv  # Exemplo de CSV para importação
+│   └── README.md
 ├── docs/                        # Documentação
 │   ├── ESTRUTURA-PROJETO.md    # Estrutura detalhada
-│   ├── INICIO-RAPIDO.md        # Guia de início rápido
+│   ├── GUIA-INICIO-RAPIDO.md   # Guia de início rápido
 │   ├── LIMPEZA-REALIZADA.md    # Log de limpeza
-│   └── RESUMO-LIMPEZA.txt      # Resumo executivo
-├── public/                      # Arquivos públicos
-│   └── Relatório de Desenvolvimento - Desenvolvimento.csv
+│   └── README.md
 ├── scripts/                     # Scripts utilitários
 │   ├── importar-csv-direto.js  # Importação de CSV
 │   ├── popular-banco-completo.js # Popular banco
+│   ├── testar-api.js           # Teste de API
 │   ├── testar-conexao-db.js    # Teste de conexão
 │   └── verificar-dados.js      # Verificação de dados
 ├── src/                         # Código fonte frontend
 │   ├── assets/                 # Imagens e recursos
 │   ├── components/             # Componentes React
-│   │   ├── ui/                 # Componentes base (shadcn)
+│   │   ├── common/             # Componentes reutilizáveis
+│   │   ├── dialogs/            # Componentes de diálogo
 │   │   ├── dashboard/          # Componentes do dashboard
+│   │   ├── reports/            # Componentes de relatório
 │   │   ├── skeletons/          # Loading skeletons
+│   │   ├── ui/                 # Componentes base (shadcn)
 │   │   └── [...]               # Outros componentes
 │   ├── contexts/               # Contextos React
 │   ├── hooks/                  # Custom hooks
-│   ├── lib/                    # Utilitários
+│   ├── lib/                    # Utilitários e constantes
 │   ├── pages/                  # Páginas da aplicação
+│   ├── types/                  # Tipos TypeScript compartilhados
 │   ├── App.tsx                 # Componente principal
 │   ├── main.tsx                # Entry point
 │   └── index.css               # Estilos globais
 ├── .env.example                # Exemplo de variáveis de ambiente
 ├── .gitignore                  # Arquivos ignorados pelo Git
+├── CHANGELOG_AI.md             # Log de mudanças da refatoração
 ├── components.json             # Configuração Shadcn/ui
 ├── eslint.config.js            # Configuração ESLint
 ├── index.html                  # HTML principal
@@ -445,6 +451,8 @@ mysql -u root -p < database-init-clean.sql
 - Compressão de assets
 - Code splitting
 - Índices no banco de dados
+- Barrel exports para imports otimizados
+- Componentes organizados por funcionalidade
 
 ### Recomendações
 
@@ -452,6 +460,13 @@ mysql -u root -p < database-init-clean.sql
 - Faça limpeza periódica de cache
 - Otimize imagens antes do upload
 - Use CDN para assets estáticos em produção
+
+---
+
+## 🔄 Changelog
+
+Para ver o histórico completo de mudanças e refatorações, consulte:
+- **[CHANGELOG_AI.md](CHANGELOG_AI.md)** - Log detalhado da última refatoração automatizada
 
 
 

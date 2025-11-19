@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FormField } from "@/components/FormField"
+import { FormField } from "@/components/common"
 import { api, type Work } from '@/lib/api'
 import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES, DELIVERY_STATUS } from '@/lib/constants'
 import { normalizeUrl } from '@/lib/utils'
@@ -61,7 +61,7 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
         value,
         domain: normalizeUrl(domain),
         site_type: siteType,
-        template: template.trim() || null,
+        template: template.trim() || undefined,
         delivery_date: dateObj.getTime(),
         delivery_month: deliveryMonth.charAt(0).toUpperCase() + deliveryMonth.slice(1),
         delivery_year: deliveryYear,

@@ -1,20 +1,5 @@
 import * as React from 'react'
-
-interface User {
-  id: number
-  username: string
-  role: 'master' | 'standard'
-  developerName?: string
-}
-
-interface AuthContextType {
-  user: User | null
-  token: string | null
-  loading: boolean
-  login: (username: string, password: string) => Promise<void>
-  logout: () => void
-  isMaster: boolean
-}
+import type { User, AuthContextType } from '@/types'
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
 

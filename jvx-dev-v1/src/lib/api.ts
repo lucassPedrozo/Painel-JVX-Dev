@@ -1,3 +1,8 @@
+import type { Work, User, Developer } from '@/types'
+
+// Re-exportar tipos para compatibilidade
+export type { Work, User, Developer }
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 // Helper para obter token
@@ -9,25 +14,7 @@ const getAuthHeaders = () => {
   }
 }
 
-export interface Work {
-  id?: number
-  developer: string
-  deadline_type: string
-  value: string | number
-  domain: string
-  site_type: string
-  template?: string
-  delivery_date: number | string
-  delivery_month: string
-  delivery_year: number
-  status: string
-  developer_status: string
-  completed_at?: string | null
-  payment_status: string
-  observations?: string
-}
-
-export interface User {
+export interface APIUser {
   id: number
   username: string
   role: 'master' | 'standard'
@@ -43,11 +30,11 @@ export const api = {
     })
     if (!response.ok) throw new Error('Erro ao carregar trabalhos')
     const data = await response.json()
-    return data.map((w: any) => {
+    return data.map((w: Record<string, unknown>) => {
       // Converter data do formato YYYY-MM-DD para timestamp
       // Adicionar timezone offset para evitar problemas de fuso horário
       let deliveryTimestamp = new Date().getTime()
-      if (w.delivery_date) {
+      if (w.delivery_date && typeof w.delivery_date === 'string') {
         const dateStr = w.delivery_date.split('T')[0] // Pegar apenas a parte da data
         const [year, month, day] = dateStr.split('-')
         // Criar data no horário local (meio-dia para evitar problemas de timezone)
@@ -184,7 +171,7 @@ export const api = {
           const dataLines = lines.slice(1)
 
           // Parse CSV com suporte a campos entre aspas
-          const csvData = dataLines.map((line, index) => {
+          const csvData = dataLines.map((line) => {
             // Regex para split CSV respeitando aspas
             const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/
             const values = line.split(regex).map(v => v.trim().replace(/^"|"$/g, ''))
@@ -230,8 +217,8 @@ export const api = {
 
           const result = await response.json()
           resolve(result)
-        } catch (error: any) {
-          reject(error)
+        } catch (error) {
+          reject(error instanceof Error ? error : new Error('Erro desconhecido'))
         }
       }
 

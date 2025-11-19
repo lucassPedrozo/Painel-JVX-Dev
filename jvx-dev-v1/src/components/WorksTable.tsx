@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { ArrowUpDown, FileText, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+// ScrollArea removido - não utilizado
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,

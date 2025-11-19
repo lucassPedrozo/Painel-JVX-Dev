@@ -46,7 +46,15 @@ export function PaymentTimeline({ works }: PaymentTimelineProps) {
       }))
   }, [works])
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface TimelineData {
+    month: string
+    entregues: number
+    pendentes: number
+    pagos: number
+    total: number
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: TimelineData }> }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border rounded-lg shadow-lg p-3">

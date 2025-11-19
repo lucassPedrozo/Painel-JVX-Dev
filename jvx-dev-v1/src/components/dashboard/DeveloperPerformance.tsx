@@ -49,7 +49,16 @@ export function DeveloperPerformance({ works }: DeveloperPerformanceProps) {
       .slice(0, 10)
   }, [works])
 
-  const ProjectTooltip = ({ active, payload }: any) => {
+  interface DevPerformanceData {
+    name: string
+    total: number
+    entregues: number
+    pagos: number
+    pendentes: number
+    receita: number
+  }
+
+  const ProjectTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: DevPerformanceData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

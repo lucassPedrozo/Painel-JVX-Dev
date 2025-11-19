@@ -50,7 +50,16 @@ export function ProjectsChart({ works }: ProjectsChartProps) {
       }))
   }, [works])
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface ChartData {
+    month: string
+    entregues: number
+    pendentes: number
+    pagos: number
+    total: number
+    receita: number
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: ChartData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

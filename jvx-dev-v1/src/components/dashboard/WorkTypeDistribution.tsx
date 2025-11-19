@@ -37,7 +37,14 @@ export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
       .sort((a, b) => b.count - a.count)
   }, [works])
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface WorkTypeData {
+    name: string
+    count: number
+    percentage: number
+    revenue: number
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: WorkTypeData }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

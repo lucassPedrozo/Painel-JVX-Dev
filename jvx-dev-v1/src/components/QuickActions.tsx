@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { MoreVertical, CheckCircle, Star, Edit, Trash2 } from 'lucide-react'
+import { MoreVertical, CheckCircle, Edit, Trash2 } from 'lucide-react'
 import { type Work, api } from '@/lib/api'
 import { toast } from 'sonner'
-import { RatingDialog } from './RatingDialog'
+import { RatingDialog } from './dialogs'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface QuickActionsProps {
@@ -27,14 +27,14 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
       await api.markAsPaid(work.id)
       toast.success('Projeto marcado como pago!')
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error('Erro ao marcar como pago')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSaveRating = async (ratings: any) => {
+  const handleSaveRating = async (ratings: Record<string, unknown>) => {
     if (!work.id) return
 
     try {
@@ -45,13 +45,12 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
       toast.success('Avaliação salva com sucesso!')
       setRatingOpen(false)
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error('Erro ao salvar avaliação')
     }
   }
 
   const isPaid = work.payment_status === 'Pago'
-  const hasRating = false // Removido sistema de rating por enquanto
 
   return (
     <>

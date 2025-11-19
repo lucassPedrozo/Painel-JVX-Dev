@@ -3,9 +3,10 @@ import { ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle } from 'luci
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { PageHeader } from '@/components/PageHeader'
+import { PageHeader } from '@/components/common'
 import { useWorks } from '@/contexts/WorksContext'
 import { formatCurrency, parseValue, formatDate } from '@/lib/utils'
+import type { Work } from '@/types'
 import { cn } from '@/lib/utils'
 
 function Calendario() {
@@ -20,7 +21,7 @@ function Calendario() {
   }, [works])
 
   // Calcular status do prazo baseado na data de entrega
-  const getDeadlineStatus = (work: any) => {
+  const getDeadlineStatus = (work: Work) => {
     const deliveryDate = new Date(work.delivery_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)

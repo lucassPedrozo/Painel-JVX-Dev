@@ -34,7 +34,7 @@ export default function GerenciarUsuarios() {
     try {
       const data = await api.getUsers()
       setUsers(data)
-    } catch (error) {
+    } catch {
       toast.error('Erro ao carregar usuários')
     } finally {
       setLoading(false)
@@ -256,7 +256,7 @@ export default function GerenciarUsuarios() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
