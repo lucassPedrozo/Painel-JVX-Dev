@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SITE_TYPES, PAYMENT_STATUS } from '@/lib/constants'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { StatsCards } from '@/components/StatsCards'
 import { ValueCards } from '@/components/ValueCards'
 import { WorksTable } from '@/components/WorksTable'
@@ -79,8 +80,9 @@ function Sites() {
         (work.observations || "").toLowerCase().includes(term)
 
       const workDate = new Date(work.delivery_date).getTime()
-      const matchesStart = startDate ? workDate >= startDate.getTime() : true
-      const matchesEnd = endDate ? workDate <= endDate.getTime() : true
+      const matchesStart = startDate ? workDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0).getTime() : true
+      // Usar final do dia (23:59:59) para endDate para incluir trabalhos do mesmo dia
+      const matchesEnd = endDate ? workDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime() : true
 
       const matchesType = filterType === "all" || work.site_type === filterType
       const matchesPayment = filterPayment === "all" || work.payment_status === filterPayment
@@ -186,16 +188,21 @@ function Sites() {
       </div>
 
       {/* Seção de Trabalhos */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <Card className="border-transparent bg-card overflow-hidden">
         {/* Header do Card */}
-        <div className="border-b bg-muted/20">
-          <div className="p-6">
+        <div className="border-b border-border/50">
+          <div className="px-5 py-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Lista de Projetos</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Gerencie e filtre seus projetos cadastrados
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <IconFilterX className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Lista de Projetos</h2>
+                  <p className="text-[11px] text-muted-foreground">
+                    Gerencie e filtre seus projetos
+                  </p>
+                </div>
               </div>
               <WorkDialog onSubmitSuccess={reload} />
             </div>
@@ -203,7 +210,7 @@ function Sites() {
         </div>
 
         {/* Filtros e Busca */}
-        <div className="border-b bg-muted/10">
+        <div className="border-b border-border/50">
           <div className="p-4 space-y-3">
             {/* Linha 1: Busca, Filtro de Data e Ações */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -370,7 +377,7 @@ function Sites() {
             onDelete={reload}
           />
         </div>
-      </div>
+      </Card>
 
       {editingWork && (
         <EditWorkDialog
@@ -378,7 +385,6 @@ function Sites() {
           isOpen={true}
           onClose={() => setEditingWork(null)}
           onSubmitSuccess={() => {
-            setEditingWork(null)
             reload()
           }}
         />

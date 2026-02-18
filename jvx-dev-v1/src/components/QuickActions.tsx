@@ -89,10 +89,24 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
     }
 
     try {
-      await api.updateWork(work.id, {
-        ...work,
+      // Enviar apenas os campos necessários para atualizar, não spread do work inteiro
+      const updateData = {
+        developer: work.developer,
+        deadline_type: work.deadline_type,
+        value: work.value,
+        domain: work.domain,
+        site_type: work.site_type,
+        template: work.template,
+        delivery_date: work.delivery_date,
+        delivery_month: work.delivery_month,
+        delivery_year: work.delivery_year,
+        status: work.status,
+        developer_status: work.developer_status,
+        payment_status: work.payment_status,
+        observations: work.observations,
         ...ratings
-      })
+      } as Omit<Work, 'id'>
+      await api.updateWork(work.id, updateData)
       toast.success('Avaliação salva com sucesso!')
       setRatingOpen(false)
       onUpdate()

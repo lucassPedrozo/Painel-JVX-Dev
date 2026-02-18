@@ -27,20 +27,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const isDev = process.env.NODE_ENV === 'development';
       return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex items-center justify-center min-h-screen bg-background" role="alert" aria-live="assertive">
           <div className="max-w-md w-full mx-4">
             <div className="rounded-xl border bg-card shadow-lg p-8 text-center">
               <div className="flex justify-center mb-4">
-                <div className="p-3 rounded-full bg-red-100 text-red-600 dark:bg-red-950">
-                  <AlertCircle className="h-8 w-8" />
+                <div className="p-3 rounded-full bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                  <AlertCircle className="h-8 w-8" aria-hidden="true" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold mb-2">Algo deu errado</h2>
+              <h2 className="text-2xl font-bold mb-2" tabIndex={0}>Algo deu errado</h2>
               <p className="text-muted-foreground mb-6">
                 Ocorreu um erro inesperado. Por favor, tente recarregar a página.
               </p>
-              {this.state.error && (
+              {isDev && this.state.error && (
                 <details className="mb-6 text-left">
                   <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                     Detalhes do erro
@@ -53,8 +54,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <Button
                 onClick={() => window.location.reload()}
                 className="w-full"
+                aria-label="Recarregar página"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
                 Recarregar Página
               </Button>
             </div>
@@ -63,6 +65,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       )
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }

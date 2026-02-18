@@ -15,8 +15,6 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       .reduce((acc, w) => acc + parseValue(w.value), 0)
     const pendingValue = totalValue - paidValue
     
-    const averageTicket = works.length > 0 ? totalValue / works.length : 0
-    
     const developers = new Set(works.map(w => w.developer).filter(Boolean)).size
     
     const thisMonth = new Date()
@@ -51,7 +49,6 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       totalValue,
       paidValue,
       pendingValue,
-      averageTicket,
       developers,
       thisMonthValue,
       monthGrowth,
@@ -68,42 +65,42 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       value: works.length.toString(),
       icon: Package,
       description: 'Projetos cadastrados',
-      color: 'text-blue-600 bg-blue-100 dark:bg-blue-950'
+      color: 'text-blue-600 bg-blue-500/10 dark:text-blue-400'
     },
     {
       title: 'Projetos Entregues',
       value: metrics.deliveredCount.toString(),
       icon: TrendingUp,
       description: `${((metrics.deliveredCount / works.length) * 100).toFixed(1)}% do total`,
-      color: 'text-green-600 bg-green-100 dark:bg-green-950'
+      color: 'text-green-600 bg-green-500/10 dark:text-green-400'
     },
     {
       title: 'Projetos Pendentes',
       value: metrics.pendingCount.toString(),
       icon: TrendingDown,
       description: 'Aguardando entrega',
-      color: 'text-orange-600 bg-orange-100 dark:bg-orange-950'
+      color: 'text-orange-600 bg-orange-500/10 dark:text-orange-400'
     },
     {
       title: 'Pagamentos Recebidos',
       value: metrics.paidCount.toString(),
       icon: DollarSign,
       description: `${((metrics.paidCount / works.length) * 100).toFixed(1)}% do total`,
-      color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-950'
+      color: 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400'
     },
     {
       title: 'Desenvolvedores Ativos',
       value: metrics.developers.toString(),
       icon: Users,
       description: 'Equipe trabalhando',
-      color: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-950'
+      color: 'text-cyan-600 bg-cyan-500/10 dark:text-cyan-400'
     },
     {
       title: 'Receita Total',
       value: formatCurrency(metrics.totalValue),
       icon: Calendar,
-      description: `Ticket médio: ${formatCurrency(metrics.averageTicket)}`,
-      color: 'text-purple-600 bg-purple-100 dark:bg-purple-950'
+      description: `Pgto recebido: ${formatCurrency(metrics.paidValue)}`,
+      color: 'text-purple-600 bg-purple-500/10 dark:text-purple-400'
     }
   ]
 

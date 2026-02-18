@@ -3,6 +3,8 @@
  * Centralizadas para facilitar manutenção e consistência
  */
 
+import { getApiUrl } from '@/lib/api-url'
+
 // ============================================
 // TIPOS DE SITE
 // ============================================
@@ -116,7 +118,7 @@ export const DEFAULT_VALUES = {
 // ============================================
 export const API_CONFIG = {
   get BASE_URL() {
-    return (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || 'http://localhost:3001'
+    return getApiUrl()
   },
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3

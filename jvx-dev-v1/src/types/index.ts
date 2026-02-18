@@ -33,6 +33,11 @@ export interface Work {
   observations?: string
   completed_at?: string | null
   completed_by?: string | null
+  rating_aparencia?: number | null
+  rating_complexidade?: number | null
+  rating_satisfacao?: number | null
+  rating_material?: number | null
+  rating_observacoes?: string | null
   created_at?: string
   updated_at?: string
 }

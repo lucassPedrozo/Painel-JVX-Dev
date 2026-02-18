@@ -16,6 +16,7 @@ const Calendario = lazy(() => import("./pages/Calendario"))
 const Equipe = lazy(() => import("./pages/Equipe"))
 const Relatorios = lazy(() => import("./pages/Relatorios"))
 const Configuracoes = lazy(() => import("./pages/Configuracoes"))
+const Ferramentas = lazy(() => import("./pages/Ferramentas"))
 const GerenciarUsuarios = lazy(() => import("./pages/GerenciarUsuarios"))
 
 // Layout wrapper para páginas autenticadas
@@ -23,7 +24,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="container mx-auto px-6 py-6 flex-1">
+      <main className="flex-1 container mx-auto px-4 sm:px-6 py-5" tabIndex={0} aria-label="Conteúdo principal">
         {children}
       </main>
     </div>
@@ -83,6 +84,12 @@ function AppContent() {
           <Route path="/configuracoes" element={
             <ProtectedRoute>
               <AuthenticatedLayout><Configuracoes /></AuthenticatedLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/ferramentas" element={
+            <ProtectedRoute>
+              <AuthenticatedLayout><Ferramentas /></AuthenticatedLayout>
             </ProtectedRoute>
           } />
           

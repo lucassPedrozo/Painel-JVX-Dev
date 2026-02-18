@@ -7,7 +7,7 @@ interface WorkTypeDistributionProps {
   works: Work[]
 }
 
-const COLORS = ['hsl(var(--primary))', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+const COLORS = ['hsl(var(--primary))', '#3eba83', '#5b93e5', '#dba03e', '#e05858', '#8670d6', '#d46c9e']
 
 export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
   const data = React.useMemo(() => {

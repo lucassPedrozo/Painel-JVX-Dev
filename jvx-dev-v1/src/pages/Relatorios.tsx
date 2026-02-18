@@ -65,9 +65,6 @@ function Relatorios() {
       .filter(w => w.payment_status !== 'Pago')
       .reduce((sum, w) => sum + parseValue(w.value), 0)
 
-    // Ticket médio
-    const averageTicket = totalProjects > 0 ? totalRevenue / totalProjects : 0
-
     // Taxa de conclusão
     const completionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0
 
@@ -83,7 +80,6 @@ function Relatorios() {
       totalRevenue,
       paidRevenue,
       pendingRevenue,
-      averageTicket,
       completionRate,
       paymentRate
     }
@@ -138,7 +134,6 @@ function Relatorios() {
       .map(([developer, data]) => ({
         developer,
         ...data,
-        averageTicket: data.total > 0 ? data.totalRevenue / data.total : 0,
         completionRate: data.total > 0 ? (data.completed / data.total) * 100 : 0,
         paymentRate: data.total > 0 ? (data.paid / data.total) * 100 : 0
       }))
@@ -179,8 +174,7 @@ function Relatorios() {
       .map(([type, data]) => ({
         type,
         ...data,
-        percentage: filteredWorks.length > 0 ? (data.count / filteredWorks.length) * 100 : 0,
-        averageTicket: data.count > 0 ? data.revenue / data.count : 0
+        percentage: filteredWorks.length > 0 ? (data.count / filteredWorks.length) * 100 : 0
       }))
       .sort((a, b) => b.count - a.count)
   }, [filteredWorks])
@@ -227,7 +221,6 @@ function Relatorios() {
         month: new Date(month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
         monthKey: month,
         ...data,
-        averageTicket: data.total > 0 ? data.revenue / data.total : 0
       }))
       .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
   }, [filteredWorks])
@@ -259,9 +252,8 @@ function Relatorios() {
       ["Projetos Não Pagos", financialMetrics.unpaidProjects.toString()],
       ["", ""],
       ["Receita Total", formatCurrency(financialMetrics.totalRevenue)],
-      ["Receita Recebida", formatCurrency(financialMetrics.paidRevenue)],
+      ["Pagamentos Realizados", formatCurrency(financialMetrics.paidRevenue)],
       ["Receita Pendente", formatCurrency(financialMetrics.pendingRevenue)],
-      ["Ticket Médio", formatCurrency(financialMetrics.averageTicket)],
       ["", ""],
       ["Taxa de Conclusão", `${financialMetrics.completionRate.toFixed(1)}%`],
       ["Taxa de Pagamento", `${financialMetrics.paymentRate.toFixed(1)}%`]
@@ -270,7 +262,7 @@ function Relatorios() {
   }
 
   const exportDeveloperReport = () => {
-    const headers = ["Desenvolvedor", "Total", "Concluídos", "Pagos", "Receita Total", "Receita Recebida", "Receita Pendente", "Ticket Médio", "Taxa Conclusão", "Taxa Pagamento"]
+    const headers = ["Desenvolvedor", "Total", "Concluídos", "Pagos", "Receita Total", "Pagamentos Realizados", "Receita Pendente", "Taxa Conclusão", "Taxa Pagamento"]
     const rows = developerStats.map(dev => [
       dev.developer,
       dev.total.toString(),
@@ -279,7 +271,6 @@ function Relatorios() {
       formatCurrency(dev.totalRevenue),
       formatCurrency(dev.paidRevenue),
       formatCurrency(dev.pendingRevenue),
-      formatCurrency(dev.averageTicket),
       `${dev.completionRate.toFixed(1)}%`,
       `${dev.paymentRate.toFixed(1)}%`
     ])
@@ -287,28 +278,26 @@ function Relatorios() {
   }
 
   const exportTypeReport = () => {
-    const headers = ["Tipo", "Quantidade", "Percentual", "Receita Total", "Receita Paga", "Ticket Médio"]
+    const headers = ["Tipo", "Quantidade", "Percentual", "Receita Total", "Receita Paga"]
     const rows = typeStats.map(type => [
       type.type,
       type.count.toString(),
       `${type.percentage.toFixed(1)}%`,
       formatCurrency(type.revenue),
-      formatCurrency(type.paidRevenue),
-      formatCurrency(type.averageTicket)
+      formatCurrency(type.paidRevenue)
     ])
     generateCSV([headers, ...rows], "relatorio-tipos")
   }
 
   const exportMonthlyReport = () => {
-    const headers = ["Mês", "Total", "Concluídos", "Pagos", "Receita Total", "Receita Paga", "Ticket Médio"]
+    const headers = ["Mês", "Total", "Concluídos", "Pagos", "Receita Total", "Receita Paga"]
     const rows = monthlyStats.map(month => [
       month.month,
       month.total.toString(),
       month.completed.toString(),
       month.paid.toString(),
       formatCurrency(month.revenue),
-      formatCurrency(month.paidRevenue),
-      formatCurrency(month.averageTicket)
+      formatCurrency(month.paidRevenue)
     ])
     generateCSV([headers, ...rows], "relatorio-mensal")
   }
@@ -337,8 +326,8 @@ function Relatorios() {
       />
 
       {/* Filtros */}
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="border-b bg-muted/10">
+      <Card className="border-transparent bg-card overflow-hidden">
+        <div className="border-b border-border/50">
           <div className="p-4 space-y-3">
             {/* Linha 1: Filtros de Data e Contador */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -421,46 +410,54 @@ function Relatorios() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Resumo Financeiro */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Resumo Financeiro</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-muted-foreground">Receita Total</p>
-              <DollarSign className="h-5 w-5 text-blue-600" />
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <DollarSign className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-sm font-semibold">Resumo Financeiro</h3>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="p-5 border-transparent bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-600/10 text-sky-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Receita Total</p>
+                <p className="text-xl font-bold tracking-tight">{formatCurrency(financialMetrics.totalRevenue)}</p>
+                <p className="text-[11px] text-muted-foreground">{financialMetrics.totalProjects} projetos</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(financialMetrics.totalRevenue)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.totalProjects} projetos</p>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-muted-foreground">Receita Recebida</p>
-              <TrendingUp className="h-5 w-5 text-green-600" />
+          <Card className="p-5 border-transparent bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-600">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Pagamentos Realizados</p>
+                <p className="text-xl font-bold tracking-tight text-emerald-600">{formatCurrency(financialMetrics.paidRevenue)}</p>
+                <p className="text-[11px] text-muted-foreground">{financialMetrics.paidProjects} pagos ({financialMetrics.paymentRate.toFixed(1)}%)</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(financialMetrics.paidRevenue)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.paidProjects} pagos ({financialMetrics.paymentRate.toFixed(1)}%)</p>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-muted-foreground">Receita Pendente</p>
-              <Package className="h-5 w-5 text-orange-600" />
+          <Card className="p-5 border-transparent bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-600/10 text-amber-600">
+                <Package className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Receita Pendente</p>
+                <p className="text-xl font-bold tracking-tight text-amber-600">{formatCurrency(financialMetrics.pendingRevenue)}</p>
+                <p className="text-[11px] text-muted-foreground">{financialMetrics.unpaidProjects} não pagos</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-orange-600">{formatCurrency(financialMetrics.pendingRevenue)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{financialMetrics.unpaidProjects} não pagos</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-muted-foreground">Ticket Médio</p>
-              <FileText className="h-5 w-5 text-purple-600" />
-            </div>
-            <p className="text-2xl font-bold">{formatCurrency(financialMetrics.averageTicket)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Por projeto</p>
           </Card>
         </div>
 
@@ -474,19 +471,23 @@ function Relatorios() {
 
       {/* Por Desenvolvedor */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Análise por Desenvolvedor</h3>
-        <Card className="overflow-hidden">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-sm font-semibold">Análise por Desenvolvedor</h3>
+        </div>
+        <Card className="overflow-hidden border-transparent bg-card">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/30 border-b border-border/50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Desenvolvedor</th>
                   <th className="text-right px-4 py-3 font-semibold">Total</th>
                   <th className="text-right px-4 py-3 font-semibold">Pagos</th>
                   <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
-                  <th className="text-right px-4 py-3 font-semibold">Recebida</th>
+                  <th className="text-right px-4 py-3 font-semibold">Pgto Realizado</th>
                   <th className="text-right px-4 py-3 font-semibold">Pendente</th>
-                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
                 </tr>
               </thead>
               <tbody>
@@ -494,11 +495,10 @@ function Relatorios() {
                   <tr key={index} className="border-b hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium">{dev.developer}</td>
                     <td className="text-right px-4 py-3">{dev.total}</td>
-                    <td className="text-right px-4 py-3 text-green-600">{dev.paid}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{dev.paid}</td>
                     <td className="text-right px-4 py-3 font-semibold">{formatCurrency(dev.totalRevenue)}</td>
-                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(dev.paidRevenue)}</td>
-                    <td className="text-right px-4 py-3 text-orange-600">{formatCurrency(dev.pendingRevenue)}</td>
-                    <td className="text-right px-4 py-3">{formatCurrency(dev.averageTicket)}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(dev.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3 text-amber-600">{formatCurrency(dev.pendingRevenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -516,18 +516,22 @@ function Relatorios() {
 
       {/* Por Tipo */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Análise por Tipo de Projeto</h3>
-        <Card className="overflow-hidden">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Package className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-sm font-semibold">Análise por Tipo de Projeto</h3>
+        </div>
+        <Card className="overflow-hidden border-transparent bg-card">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/30 border-b border-border/50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Tipo</th>
                   <th className="text-right px-4 py-3 font-semibold">Quantidade</th>
                   <th className="text-right px-4 py-3 font-semibold">%</th>
                   <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
                   <th className="text-right px-4 py-3 font-semibold">Receita Paga</th>
-                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
                 </tr>
               </thead>
               <tbody>
@@ -537,8 +541,7 @@ function Relatorios() {
                     <td className="text-right px-4 py-3">{type.count}</td>
                     <td className="text-right px-4 py-3">{type.percentage.toFixed(1)}%</td>
                     <td className="text-right px-4 py-3 font-semibold">{formatCurrency(type.revenue)}</td>
-                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(type.paidRevenue)}</td>
-                    <td className="text-right px-4 py-3">{formatCurrency(type.averageTicket)}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(type.paidRevenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -556,11 +559,16 @@ function Relatorios() {
 
       {/* Mensal */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Análise Mensal</h3>
-        <Card className="overflow-hidden">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Filter className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-sm font-semibold">Análise Mensal</h3>
+        </div>
+        <Card className="overflow-hidden border-transparent bg-card">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/30 border-b border-border/50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold">Mês</th>
                   <th className="text-right px-4 py-3 font-semibold">Total</th>
@@ -568,7 +576,6 @@ function Relatorios() {
                   <th className="text-right px-4 py-3 font-semibold">Pagos</th>
                   <th className="text-right px-4 py-3 font-semibold">Receita Total</th>
                   <th className="text-right px-4 py-3 font-semibold">Receita Paga</th>
-                  <th className="text-right px-4 py-3 font-semibold">Ticket Médio</th>
                 </tr>
               </thead>
               <tbody>
@@ -577,10 +584,9 @@ function Relatorios() {
                     <td className="px-4 py-3 font-medium">{month.month}</td>
                     <td className="text-right px-4 py-3">{month.total}</td>
                     <td className="text-right px-4 py-3">{month.completed}</td>
-                    <td className="text-right px-4 py-3 text-green-600">{month.paid}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{month.paid}</td>
                     <td className="text-right px-4 py-3 font-semibold">{formatCurrency(month.revenue)}</td>
-                    <td className="text-right px-4 py-3 text-green-600">{formatCurrency(month.paidRevenue)}</td>
-                    <td className="text-right px-4 py-3">{formatCurrency(month.averageTicket)}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(month.paidRevenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -598,9 +604,14 @@ function Relatorios() {
 
       {/* Relatório Completo */}
       <div>
-        <h3 className="text-lg font-bold mb-4">Relatório Completo</h3>
-        <Card className="p-6">
-          <p className="text-sm text-muted-foreground mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <FileText className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-sm font-semibold">Relatório Completo</h3>
+        </div>
+        <Card className="p-5 border-transparent bg-card">
+          <p className="text-xs text-muted-foreground mb-3">
             Exporte todos os {filteredWorks.length} projetos selecionados com informações detalhadas.
           </p>
           <Button onClick={exportCompleteReport} variant="outline">
@@ -611,13 +622,12 @@ function Relatorios() {
       </div>
 
       {/* Informações */}
-      <Card className="p-6 bg-muted/50">
-        <h4 className="font-semibold mb-2">ℹ️ Sobre os Cálculos</h4>
-        <ul className="text-sm text-muted-foreground space-y-1">
+      <Card className="p-5 border-primary/20 bg-primary/[0.03]">
+        <h4 className="text-sm font-semibold mb-2">Sobre os Cálculos</h4>
+        <ul className="text-xs text-muted-foreground space-y-1">
           <li>• <strong>Receita Total:</strong> Soma de todos os valores dos projetos filtrados</li>
-          <li>• <strong>Receita Recebida:</strong> Soma apenas dos projetos com status "Pago"</li>
+          <li>• <strong>Pagamentos Realizados:</strong> Soma apenas dos projetos com status "Pago"</li>
           <li>• <strong>Receita Pendente:</strong> Soma dos projetos com status diferente de "Pago"</li>
-          <li>• <strong>Ticket Médio:</strong> Receita total dividida pelo número de projetos</li>
           <li>• <strong>Taxa de Pagamento:</strong> Percentual de projetos pagos em relação ao total</li>
           <li>• Todos os cálculos são precisos e validados para uso financeiro</li>
         </ul>

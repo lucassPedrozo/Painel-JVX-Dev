@@ -5,26 +5,78 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import os from "os";
 
 // Carregar variáveis de ambiente
 dotenv.config();
 
 const app = express();
 
+app.disable("x-powered-by");
+
+const NODE_ENV = process.env.NODE_ENV || "development";
+const rawCorsOrigins = (process.env.CORS_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean);
+
 // Configurar CORS
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (rawCorsOrigins.length === 0) {
+      if (NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS não permitido"));
+    }
+
+    if (rawCorsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("CORS não permitido"));
+  },
+  credentials: rawCorsOrigins.length > 0
 };
 app.use(cors(corsOptions));
 
-// Aumentar limite de payload para importação de CSV
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Headers de segurança
+app.use(helmet());
+
+// Rate limit global e para login
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Tente novamente mais tarde." }
+});
+
+app.use(globalLimiter);
+app.use("/auth/login", loginLimiter);
+
+// Limite padrão de payload (10mb para suportar importações CSV via API)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Configurações
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || "REMOVED-SECRET";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  console.error("❌ JWT_SECRET ausente ou fraco. Configure uma chave com 32+ caracteres.");
+  process.exit(1);
+}
 
 // Pool de conexões MySQL com Promises
 const pool = mysql.createPool({
@@ -54,22 +106,45 @@ const asyncHandler = (fn) => (req, res, next) => {
 // ============================================
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ============================================
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: "Token não fornecido" });
-  }
+    if (!token) {
+      return res.status(401).json({ error: "Token não fornecido" });
+    }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error("Erro na verificação do token:", err.message);
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Verificar sessão ativa no banco de dados
+    const [rows] = await pool.execute(
+      "SELECT session_token FROM users WHERE id = ? AND active = TRUE",
+      [decoded.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Usuário não encontrado ou inativo" });
+    }
+
+    // Se o banco tem session_token, o JWT deve corresponder
+    const dbSessionToken = rows[0].session_token;
+    if (dbSessionToken && dbSessionToken !== decoded.sessionToken) {
+      return res.status(401).json({
+        error: "Sessão encerrada. Outro dispositivo fez login com esta conta.",
+        code: "SESSION_REPLACED"
+      });
+    }
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(403).json({ error: "Token inválido ou expirado" });
     }
-    req.user = user;
-    next();
-  });
+    console.error("Erro na autenticação:", err);
+    return res.status(500).json({ error: "Erro interno de autenticação" });
+  }
 };
 
 // Middleware para verificar se é master
@@ -79,6 +154,13 @@ const requireMaster = (req, res, next) => {
   }
   next();
 };
+
+// ============================================
+// HEALTH CHECK (público, sem autenticação)
+// ============================================
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString(), uptime: process.uptime() });
+});
 
 // ============================================
 // ROTAS DE AUTENTICAÇÃO
@@ -123,19 +205,28 @@ app.post("/auth/login", asyncHandler(async (req, res) => {
     return res.status(401).json({ error: "Usuário ou senha inválidos" });
   }
 
-  // Gerar token JWT
+  // Gerar token de sessão único (invalida sessões anteriores em outros dispositivos)
+  const sessionToken = crypto.randomUUID();
+
+  await pool.execute(
+    "UPDATE users SET session_token = ? WHERE id = ?",
+    [sessionToken, user.id]
+  );
+
+  // Gerar token JWT (inclui sessionToken para validação)
   const token = jwt.sign(
     { 
       id: user.id, 
       username: user.username, 
       role: user.role,
-      developerName: user.developer_name
+      developerName: user.developer_name,
+      sessionToken
     },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
 
-  console.log(`✓ Login bem-sucedido: ${user.username} (${user.role})`);
+  console.log(`✓ Login bem-sucedido: ${user.username} (${user.role}) — sessão anterior invalidada`);
 
   res.json({
     token,
@@ -152,6 +243,18 @@ app.post("/auth/login", asyncHandler(async (req, res) => {
 app.get("/auth/verify", authenticateToken, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
+
+// Logout (invalidar sessão no servidor)
+app.post("/auth/logout", authenticateToken, asyncHandler(async (req, res) => {
+  await pool.execute(
+    "UPDATE users SET session_token = NULL WHERE id = ?",
+    [req.user.id]
+  );
+
+  console.log(`✓ Logout: ${req.user.username}`);
+
+  res.json({ success: true, message: "Logout realizado com sucesso" });
+}));
 
 // ============================================
 // ROTAS DE WORKS (COM CONTROLE DE ACESSO)
@@ -177,21 +280,68 @@ app.get("/works", authenticateToken, asyncHandler(async (req, res) => {
 
 // POST novo work (apenas master)
 app.post("/works", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
-  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, rating_aparencia, rating_complexidade, rating_satisfacao, rating_material, rating_observacoes } = req.body;
+
+  // Validação de campos obrigatórios
+  if (!developer || !domain || !site_type || !delivery_date) {
+    return res.status(400).json({ error: "Campos obrigatórios: developer, domain, site_type, delivery_date" });
+  }
+
+  if (value === undefined || value === null || isNaN(Number(value))) {
+    return res.status(400).json({ error: "Campo 'value' deve ser um número válido" });
+  }
+
+  // Garantir que o value é numérico
+  const numericValue = Number(value);
+
+  // Normalizar delivery_date para formato YYYY-MM-DD
+  let normalizedDate = delivery_date;
+  if (typeof delivery_date === 'string' && delivery_date.includes('T')) {
+    normalizedDate = delivery_date.split('T')[0];
+  }
+
+  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, rating_aparencia, rating_complexidade, rating_satisfacao, rating_material, rating_observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   
-  const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  
-  const [result] = await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, developer_status || 'Em Andamento', payment_status, observations]);
+  const finalDeveloperStatus = developer_status || 'Em Andamento';
+  const finalStatus = status || 'Não Entregue';
+  const finalPaymentStatus = payment_status || 'Não Pago';
+
+  const [result] = await pool.execute(sql, [developer.trim(), deadline_type || 'Normal', numericValue, domain.trim(), site_type, template || null, normalizedDate, delivery_month || '', delivery_year || new Date().getFullYear(), finalStatus, finalDeveloperStatus, finalPaymentStatus, observations || null, rating_aparencia || null, rating_complexidade || null, rating_satisfacao || null, rating_material || null, rating_observacoes || null]);
   
   console.log(`✓ Projeto criado: ID ${result.insertId} - ${domain}`);
   
-  res.json({ id: result.insertId, ...req.body });
+  // Retornar dados normalizados com o ID gerado
+  res.json({
+    id: result.insertId,
+    developer: developer.trim(),
+    deadline_type: deadline_type || 'Normal',
+    value: numericValue,
+    domain: domain.trim(),
+    site_type,
+    template: template || null,
+    delivery_date: normalizedDate,
+    delivery_month: delivery_month || '',
+    delivery_year: delivery_year || new Date().getFullYear(),
+    status: finalStatus,
+    developer_status: finalDeveloperStatus,
+    payment_status: finalPaymentStatus,
+    observations: observations || null
+  });
 }));
 
 // PUT para atualizar work (apenas master)
 app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations } = req.body;
+  const { developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, rating_aparencia, rating_complexidade, rating_satisfacao, rating_material, rating_observacoes } = req.body;
+
+  // Validação de campos obrigatórios
+  if (!developer || !domain || !site_type || !delivery_date) {
+    return res.status(400).json({ error: "Campos obrigatórios: developer, domain, site_type, delivery_date" });
+  }
+
+  if (value === undefined || value === null || isNaN(Number(value))) {
+    return res.status(400).json({ error: "Campo 'value' deve ser um número válido" });
+  }
 
   // Verificar se o registro existe
   const [existing] = await pool.execute("SELECT * FROM works WHERE id = ?", [id]);
@@ -201,6 +351,12 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
   }
 
   const oldWork = existing[0];
+
+  // Normalizar delivery_date para formato YYYY-MM-DD
+  let normalizedDate = delivery_date;
+  if (typeof delivery_date === 'string' && delivery_date.includes('T')) {
+    normalizedDate = delivery_date.split('T')[0];
+  }
 
   // Se o status mudou para "Entregue" e não estava "Entregue" antes,
   // marcar automaticamente como "Concluído" com logs
@@ -216,10 +372,13 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
     console.log(`  Completado por: ${completed_by} em ${completed_at}`);
   }
 
+  // Garantir que value é numérico
+  const numericValue = Number(value);
+
   // Atualizar o registro
-  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, template = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ?, completed_at = ?, completed_by = ? WHERE id = ?";
+  const sql = "UPDATE works SET developer = ?, deadline_type = ?, value = ?, domain = ?, site_type = ?, template = ?, delivery_date = ?, delivery_month = ?, delivery_year = ?, status = ?, developer_status = ?, payment_status = ?, observations = ?, completed_at = ?, completed_by = ?, rating_aparencia = ?, rating_complexidade = ?, rating_satisfacao = ?, rating_material = ?, rating_observacoes = ? WHERE id = ?";
   
-  await pool.execute(sql, [developer, deadline_type, value, domain, site_type, template || null, delivery_date, delivery_month, delivery_year, status, finalDeveloperStatus, payment_status, observations, completed_at, completed_by, id]);
+  await pool.execute(sql, [developer.trim(), deadline_type || 'Normal', numericValue, domain.trim(), site_type, template || null, normalizedDate, delivery_month || '', delivery_year || new Date().getFullYear(), status || 'Não Entregue', finalDeveloperStatus, payment_status || 'Não Pago', observations || null, completed_at, completed_by, rating_aparencia || null, rating_complexidade || null, rating_satisfacao || null, rating_material || null, rating_observacoes || null, id]);
   
   console.log(`✓ Projeto atualizado: ID ${id} - ${domain}`);
   console.log(`  Template: ${template || 'NULL'}`);
@@ -228,14 +387,20 @@ app.put("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req,
   res.json({
     success: true,
     message: "Trabalho atualizado com sucesso",
-    updatedWork: { id, developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status: finalDeveloperStatus, payment_status, observations, completed_at, completed_by }
+    updatedWork: { id: Number(id), developer: developer.trim(), deadline_type: deadline_type || 'Normal', value: numericValue, domain: domain.trim(), site_type, template: template || null, delivery_date: normalizedDate, delivery_month: delivery_month || '', delivery_year: delivery_year || new Date().getFullYear(), status: status || 'Não Entregue', developer_status: finalDeveloperStatus, payment_status: payment_status || 'Não Pago', observations: observations || null, completed_at, completed_by, rating_aparencia: rating_aparencia || null, rating_complexidade: rating_complexidade || null, rating_satisfacao: rating_satisfacao || null, rating_material: rating_material || null, rating_observacoes: rating_observacoes || null }
   });
 }));
 
 // PATCH para marcar como pago rapidamente (apenas master)
 app.patch("/works/:id/mark-paid", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
+  // Verificar se o projeto existe
+  const [existing] = await pool.execute("SELECT id FROM works WHERE id = ?", [id]);
+  if (existing.length === 0) {
+    return res.status(404).json({ error: "Projeto não encontrado" });
+  }
+
   await pool.execute("UPDATE works SET payment_status = 'Pago' WHERE id = ?", [id]);
   
   console.log(`✓ Projeto marcado como pago: ID ${id}`);
@@ -299,7 +464,13 @@ app.patch("/works/:id/mark-completed", authenticateToken, asyncHandler(async (re
 // DELETE work (apenas master)
 app.delete("/works/:id", authenticateToken, requireMaster, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
+  // Verificar se o projeto existe
+  const [existing] = await pool.execute("SELECT id FROM works WHERE id = ?", [id]);
+  if (existing.length === 0) {
+    return res.status(404).json({ error: "Projeto não encontrado" });
+  }
+
   await pool.execute("DELETE FROM works WHERE id = ?", [id]);
   
   console.log(`✓ Projeto deletado: ID ${id}`);
@@ -409,6 +580,10 @@ app.post("/users", authenticateToken, requireMaster, asyncHandler(async (req, re
     return res.status(400).json({ error: "Dados incompletos" });
   }
 
+  if (password.length < 6) {
+    return res.status(400).json({ error: "A senha deve ter pelo menos 6 caracteres" });
+  }
+
   if (role === 'standard' && !developerName) {
     return res.status(400).json({ error: "Usuário padrão deve ter um desenvolvedor associado" });
   }
@@ -450,6 +625,9 @@ app.put("/users/:id", authenticateToken, requireMaster, asyncHandler(async (req,
   }
 
   if (password) {
+    if (password.length < 6) {
+      return res.status(400).json({ error: "A senha deve ter pelo menos 6 caracteres" });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
     updateFields.push("password = ?");
     updateValues.push(hashedPassword);
@@ -459,12 +637,20 @@ app.put("/users/:id", authenticateToken, requireMaster, asyncHandler(async (req,
     updateFields.push("role = ?");
     updateValues.push(role);
     
-    if (role === 'standard' && developerName) {
+    if (role === 'master') {
+      updateFields.push("developer_name = ?");
+      updateValues.push(null);
+    } else if (role === 'standard') {
+      if (!developerName) {
+        return res.status(400).json({ error: "Usuário padrão deve ter um desenvolvedor associado" });
+      }
       updateFields.push("developer_name = ?");
       updateValues.push(developerName);
-    } else if (role === 'master') {
-      updateFields.push("developer_name = NULL");
     }
+  } else if (developerName !== undefined) {
+    // Permite atualizar developer_name mesmo sem alterar role
+    updateFields.push("developer_name = ?");
+    updateValues.push(developerName || null);
   }
 
   if (typeof active === 'boolean') {
@@ -613,7 +799,7 @@ app.post("/import/csv", authenticateToken, requireMaster, asyncHandler(async (re
           continue;
         }
 
-        const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const sql = "INSERT INTO works (developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         await connection.execute(sql, [
           row.developer.trim(),
@@ -621,10 +807,12 @@ app.post("/import/csv", authenticateToken, requireMaster, asyncHandler(async (re
           value,
           row.domain.trim(),
           row.site_type || 'Site Institucional',
+          row.template || null,
           deliveryDate,
           row.delivery_month || '',
           parseInt(row.delivery_year) || new Date().getFullYear(),
           row.status || 'Não Entregue',
+          row.developer_status || 'Em Andamento',
           row.payment_status || 'Não Pago',
           row.observations || null
         ]);
@@ -712,9 +900,26 @@ app.use((err, req, res, next) => {
 // INICIAR SERVIDOR
 // ============================================
 
-app.listen(PORT, () => {
+const HOST = process.env.HOST || "0.0.0.0";
+
+app.listen(PORT, HOST, () => {
+  const nets = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        ips.push({ name, address: net.address });
+      }
+    }
+  }
+
   console.log('='.repeat(80));
   console.log(`✓ Servidor rodando em http://localhost:${PORT}`);
+  if (ips.length > 0) {
+    for (const ip of ips) {
+      console.log(`✓ Rede (${ip.name}): http://${ip.address}:${PORT}`);
+    }
+  }
   console.log(`✓ Sistema de autenticação ativo`);
   console.log(`✓ Banco de dados: ${process.env.DB_NAME || 'worksdb'}`);
   console.log(`✓ Ambiente: ${process.env.NODE_ENV || 'development'}`);

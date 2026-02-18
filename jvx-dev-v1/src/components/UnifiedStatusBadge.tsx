@@ -20,13 +20,13 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
   const { user } = useAuth()
   const [loading, setLoading] = React.useState(false)
 
-  // Se o projeto está pago, considerar como concluído
-  const isPaid = work.payment_status === 'Pago'
-  const isCompleted = isPaid || work.developer_status === 'Concluído'
+  // Usar APENAS developer_status para determinar se está concluído
+  // payment_status NÃO deve afetar o toggle de status do desenvolvedor
+  const isCompleted = work.developer_status === 'Concluído'
   
   // Verificar permissões: Master pode alterar qualquer projeto, Desenvolvedor apenas os seus
   const isMaster = user?.role === 'master'
-  const isDeveloper = user?.role === 'standard' && work.developer === user.developerName
+  const isDeveloper = user?.role === 'standard' && work.developer === (user.developerName || user.developer_name)
   const canEdit = isMaster || isDeveloper
 
   // Formatar data de conclusão
@@ -52,7 +52,7 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
   const completedBy = getCompletedBy()
 
   const handleToggleStatus = async () => {
-    if (!canEdit) return
+    if (!canEdit || loading) return
     
     setLoading(true)
     try {

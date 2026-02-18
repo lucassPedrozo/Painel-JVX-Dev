@@ -49,7 +49,6 @@ export function TechnologyStats({ works }: TechnologyStatsProps) {
           <p className="font-semibold text-sm mb-1">{data.name}</p>
           <p className="text-xs text-muted-foreground">Projetos: {data.projetos}</p>
           <p className="text-xs text-muted-foreground">Valor Total: {formatCurrency(data.valor)}</p>
-          <p className="text-xs text-muted-foreground">Ticket Médio: {formatCurrency(data.average)}</p>
         </div>
       )
     }

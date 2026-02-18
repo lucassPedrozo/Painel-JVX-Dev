@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,11 +30,17 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   CheckCircle2,
-  Info
+  Info,
+  HardDrive,
+  Activity,
+  TrendingUp,
+  Users,
+  ShieldCheck,
+  MonitorSmartphone
 } from 'lucide-react'
 
 function Configuracoes() {
-  const { isMaster } = useAuth()
+  const { isMaster, user } = useAuth()
   const { works, reload } = useWorks()
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -56,20 +63,20 @@ function Configuracoes() {
         'Ano',
         'Status',
         'Pagamento',
-        'OBS ou Template'
+        'OBS ou Template',
+        'Status Desenvolvedor',
+        'Template URL'
       ]
 
       const csvContent = [
         headers.join(','),
         ...works.map(work => {
-          // Converter timestamp para data DD/MM/YYYY
           const date = new Date(work.delivery_date)
           const day = String(date.getDate()).padStart(2, '0')
           const month = String(date.getMonth() + 1).padStart(2, '0')
           const year = date.getFullYear()
           const dateStr = `${day}/${month}/${year}`
 
-          // Formatar valor
           const valueNum = typeof work.value === 'number' ? work.value : parseFloat(String(work.value)) || 0
           const valueStr = `R$ ${valueNum.toFixed(2).replace('.', ',')}`
 
@@ -84,7 +91,9 @@ function Configuracoes() {
             work.delivery_year,
             `"${work.status}"`,
             `"${work.payment_status}"`,
-            `"${work.observations || ''}"`
+            `"${work.observations || ''}"`,
+            `"${work.developer_status || 'Em Andamento'}"`,
+            `"${work.template || ''}"`
           ].join(',')
         })
       ].join('\n')
@@ -119,8 +128,6 @@ function Configuracoes() {
 
     try {
       toast.info('Processando arquivo CSV...')
-
-      // A função api.importCSV já faz todo o processamento
       const result = await api.importCSV(file)
 
       if (result.success) {
@@ -133,7 +140,6 @@ function Configuracoes() {
           console.groupEnd()
         }
 
-        // Recarregar dados
         reload()
       } else {
         toast.error('Falha na importação')
@@ -152,9 +158,9 @@ function Configuracoes() {
   // Baixar template CSV
   const handleDownloadTemplate = () => {
     const template = [
-      'Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template',
-      'Alexandre,Normal,"R$ 200,00",exemplo-com-br.example.com,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,',
-      'Leandro,Prazo Reduzido,"R$ 150,00",exemplo2-com-br.example.com,Landing Page,15/05/2024,Maio,2024,Entregue,Pago,Template customizado'
+      'Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template,Status Desenvolvedor,Template URL',
+      'Alexandre,Normal,"R$ 200,00",exemplo-com-br.example.com,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,,Concluído,',
+      'Leandro,Prazo Reduzido,"R$ 150,00",exemplo2-com-br.example.com,Landing Page,15/05/2024,Maio,2024,Entregue,Pago,Template customizado,Concluído,https://themeforest.net/item/exemplo'
     ].join('\n')
 
     const blob = new Blob(['\uFEFF' + template], { type: 'text/csv;charset=utf-8;' })
@@ -208,6 +214,18 @@ function Configuracoes() {
     toast.success('Cache limpo com sucesso!')
   }
 
+  // Estatísticas computadas
+  // "Entregues" = projetos concluídos pelo dev (developer_status) OU marcados como entregues (status)
+  const stats = {
+    total: works.length,
+    entregues: works.filter(w => w.developer_status === 'Concluído' || w.status === 'Entregue').length,
+    pagos: works.filter(w => w.payment_status === 'Pago').length,
+    devs: new Set(works.map(w => w.developer).filter(Boolean)).size,
+  }
+
+  const taxaEntrega = stats.total > 0 ? Math.round((stats.entregues / stats.total) * 100) : 0
+  const taxaPagamento = stats.total > 0 ? Math.round((stats.pagos / stats.total) * 100) : 0
+
   return (
     <div className="space-y-6 pb-6">
       <PageHeader
@@ -215,59 +233,142 @@ function Configuracoes() {
         description="Gerencie dados, exportações e configurações do sistema"
       />
 
-      {/* Exportar/Importar Dados */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-primary" />
-            <CardTitle>Gerenciar Dados</CardTitle>
-          </div>
-          <CardDescription>
-            Exporte ou importe projetos em formato CSV
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Exportar */}
-          <div className="space-y-2">
-            <Label>Exportar Projetos</Label>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleExportCSV}
-                disabled={exporting || works.length === 0}
-                className="flex-1"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {exporting ? 'Exportando...' : `Exportar ${works.length} Projetos`}
-              </Button>
+      {/* Informações da sessão */}
+      <Card className="border-transparent bg-card overflow-hidden py-4">
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <MonitorSmartphone className="h-5 w-5 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Baixe todos os projetos em formato CSV para backup ou análise externa
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold truncate">{user?.username}</p>
+                <Badge variant={isMaster ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 shrink-0">
+                  {isMaster ? 'Administrador' : 'Padrão'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isMaster ? 'Acesso total ao sistema' : `Desenvolvedor: ${user?.developerName || user?.developer_name || 'N/A'}`}
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              Sessão ativa
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator />
+      {/* Painel de Estatísticas */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="border-transparent bg-card overflow-hidden py-4">
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Projetos</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.total}</p>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                <Activity className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Importar */}
-          {isMaster && (
-            <>
-              <div className="space-y-2">
-                <Label>Importar Projetos (CSV)</Label>
+        <Card className="border-transparent bg-card overflow-hidden py-4">
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Entregues</p>
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-2xl font-bold tracking-tight text-emerald-600">{stats.entregues}</p>
+                  <span className="text-[11px] text-muted-foreground">{taxaEntrega}%</span>
+                </div>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-transparent bg-card overflow-hidden py-4">
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Pagos</p>
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-2xl font-bold tracking-tight text-sky-600">{stats.pagos}</p>
+                  <span className="text-[11px] text-muted-foreground">{taxaPagamento}%</span>
+                </div>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10">
+                <TrendingUp className="h-4 w-4 text-sky-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-transparent bg-card overflow-hidden py-4">
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Devs</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.devs}</p>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                <Users className="h-4 w-4 text-violet-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Gerenciar Dados */}
+        <Card className="border-transparent bg-card overflow-hidden gap-3 py-4">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <FileSpreadsheet className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Gerenciar Dados</CardTitle>
+                <CardDescription className="text-[11px]">
+                  Exportação e importação de projetos
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={handleExportCSV}
+              disabled={exporting || works.length === 0}
+              className="w-full justify-start h-9 text-[13px]"
+              variant="outline"
+            >
+              <Download className="h-3.5 w-3.5 mr-2" />
+              {exporting ? 'Exportando...' : `Exportar ${works.length} projetos (CSV)`}
+            </Button>
+
+            {isMaster && (
+              <>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     onClick={handleDownloadTemplate}
-                    className="flex-1"
+                    className="flex-1 h-9 text-[13px]"
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar Template
+                    <Download className="h-3.5 w-3.5 mr-2" />
+                    Template
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => document.getElementById('csv-upload')?.click()}
                     disabled={importing}
-                    className="flex-1"
+                    className="flex-1 h-9 text-[13px]"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-3.5 w-3.5 mr-2" />
                     {importing ? 'Importando...' : 'Importar CSV'}
                   </Button>
                   <input
@@ -278,144 +379,80 @@ function Configuracoes() {
                     className="hidden"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Baixe o template, preencha com seus dados e importe de volta
-                </p>
+
+                <div className="rounded-lg border border-dashed p-3 mt-2">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Para grandes volumes (100+), use: <code className="bg-muted px-1 py-0.5 rounded text-[10px]">node importar-csv-direto.js</code>
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Manutenção */}
+        <Card className="border-transparent bg-card overflow-hidden gap-3 py-4">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <HardDrive className="h-4 w-4 text-primary" />
               </div>
-
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-xs space-y-2">
-                  <div>
-                    <strong>Formato do CSV:</strong> Desenvolvedor, Prazo, Valor R$, Domínio, Tipo de Site,
-                    Data Entrega (DD/MM/YYYY), Mês, Ano, Status, Pagamento, Observações
-                  </div>
-                  <div className="pt-2 border-t">
-                    <strong>💡 Dica:</strong> Para grandes volumes de dados (100+ registros),
-                    use o script direto: <code className="bg-muted px-1 py-0.5 rounded">node importar-csv-direto.js</code>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Manutenção de Dados */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            <CardTitle>Manutenção de Dados</CardTitle>
-          </div>
-          <CardDescription>
-            Ferramentas para gerenciar e otimizar dados do sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Recarregar Dados */}
-          <div className="space-y-2">
-            <Label>Atualizar Dados</Label>
+              <div>
+                <CardTitle className="text-sm font-semibold">Manutenção</CardTitle>
+                <CardDescription className="text-[11px]">
+                  Sincronização, cache e banco de dados
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <Button
               variant="outline"
               onClick={handleReloadData}
-              className="w-full"
+              className="w-full justify-start h-9 text-[13px]"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Recarregar Dados do Servidor
+              <RefreshCw className="h-3.5 w-3.5 mr-2" />
+              Recarregar dados do servidor
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Sincroniza os dados locais com o servidor
-            </p>
-          </div>
 
-          <Separator />
-
-          {/* Limpar Cache */}
-          <div className="space-y-2">
-            <Label>Cache do Navegador</Label>
             <Button
               variant="outline"
               onClick={handleClearCache}
-              className="w-full"
+              className="w-full justify-start h-9 text-[13px]"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Limpar Cache Local
+              <Trash2 className="h-3.5 w-3.5 mr-2" />
+              Limpar cache local
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Remove dados temporários armazenados no navegador
-            </p>
-          </div>
 
-          {isMaster && (
-            <>
-              <Separator />
-
-              {/* Limpar Banco de Dados */}
-              <div className="space-y-2">
-                <Label className="text-destructive">Limpar Banco de Dados</Label>
+            {isMaster && (
+              <>
+                <Separator />
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   onClick={() => setShowClearDialog(true)}
-                  className="w-full"
+                  className="w-full justify-start h-9 text-[13px] border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Limpar Todos os Projetos
+                  <Database className="h-3.5 w-3.5 mr-2" />
+                  Limpar banco de dados
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-destructive">ATENÇÃO:</strong> Esta ação remove TODOS os projetos do banco de dados permanentemente
+                <p className="text-[10px] text-muted-foreground pl-1">
+                  Remove todos os projetos permanentemente
                 </p>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Estatísticas do Sistema */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            <CardTitle>Estatísticas do Sistema</CardTitle>
-          </div>
-          <CardDescription>
-            Informações sobre os dados armazenados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Total de Projetos</p>
-              <p className="text-2xl font-bold">{works.length}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Projetos Entregues</p>
-              <p className="text-2xl font-bold text-green-600">
-                {works.filter(w => w.status === 'Entregue').length}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Projetos Pagos</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {works.filter(w => w.payment_status === 'Pago').length}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Desenvolvedores</p>
-              <p className="text-2xl font-bold">
-                {new Set(works.map(w => w.developer).filter(Boolean)).size}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Avisos */}
       {!isMaster && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Algumas funcionalidades estão disponíveis apenas para usuários administradores.
+          <AlertDescription className="text-xs">
+            Algumas funcionalidades estão disponíveis apenas para administradores.
           </AlertDescription>
         </Alert>
       )}

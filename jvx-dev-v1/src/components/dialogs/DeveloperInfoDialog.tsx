@@ -37,7 +37,16 @@ interface DeveloperInfoDialogProps {
   onClose: () => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+import { API_URL } from '@/lib/api-url'
+
+// Helper para obter headers de autenticação
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('jvx_token')
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : ''
+  }
+}
 
 export function DeveloperInfoDialog({ developerName, isOpen, onClose }: DeveloperInfoDialogProps) {
   const [info, setInfo] = React.useState<DeveloperInfo>({
@@ -52,8 +61,13 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
   React.useEffect(() => {
     if (isOpen && developerName) {
       setLoading(true)
-      fetch(`${API_URL}/developers/${encodeURIComponent(developerName)}`)
-        .then(res => res.json())
+      fetch(`${API_URL}/developers/${encodeURIComponent(developerName)}`, {
+        headers: getAuthHeaders()
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Erro ao carregar dados')
+          return res.json()
+        })
         .then(data => {
           if (data) {
             setInfo({
@@ -75,7 +89,7 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
         })
         .catch(err => {
           console.error("Erro ao carregar dados:", err)
-          toast.error("Erro ao carregar informações")
+          toast.error("Erro ao carregar informações do desenvolvedor")
         })
         .finally(() => setLoading(false))
     }
@@ -86,7 +100,7 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
     try {
       const response = await fetch(`${API_URL}/developers`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: developerName,
           phone: info.contacts.phone || null,
@@ -101,13 +115,16 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
         })
       })
 
-      if (!response.ok) throw new Error('Erro ao salvar')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erro ao salvar informações')
+      }
 
       toast.success("Informações salvas com sucesso!")
       onClose()
     } catch (error) {
       console.error("Erro ao salvar:", error)
-      toast.error("Erro ao salvar informações")
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar informações")
     } finally {
       setSaving(false)
     }

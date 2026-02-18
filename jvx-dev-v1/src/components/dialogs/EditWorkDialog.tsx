@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { FormField } from "@/components/common"
 import { api, type Work } from '@/lib/api'
 import { SITE_TYPES, PAYMENT_STATUS, DEADLINE_TYPES, DELIVERY_STATUS } from '@/lib/constants'
-import { normalizeUrl } from '@/lib/utils'
+import { normalizeUrl, parseValue } from '@/lib/utils'
 
 interface EditWorkDialogProps {
   work: Work
@@ -21,11 +21,20 @@ interface EditWorkDialogProps {
 export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditWorkDialogProps) {
   const [developer, setDeveloper] = React.useState(work.developer || "")
   const [deadlineType, setDeadlineType] = React.useState(work.deadline_type || "Normal")
-  const [value, setValue] = React.useState(String(work.value))
+  const [value, setValue] = React.useState(String(parseValue(work.value)))
   const [domain, setDomain] = React.useState(work.domain || "")
   const [siteType, setSiteType] = React.useState(work.site_type || "Site Institucional")
   const [template, setTemplate] = React.useState(work.template || "")
-  const [deliveryDate, setDeliveryDate] = React.useState(new Date(work.delivery_date).toISOString().split('T')[0])
+  const [deliveryDate, setDeliveryDate] = React.useState(() => {
+    // Converter delivery_date para formato YYYY-MM-DD de forma segura
+    try {
+      const d = new Date(work.delivery_date)
+      if (isNaN(d.getTime())) return ''
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    } catch {
+      return ''
+    }
+  })
   const [status, setStatus] = React.useState(work.status || "Não Entregue")
   const [paymentStatus, setPaymentStatus] = React.useState(work.payment_status || "Não Pago")
   const [observations, setObservations] = React.useState(work.observations || "")
@@ -35,11 +44,20 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
     if (isOpen) {
       setDeveloper(work.developer || "")
       setDeadlineType(work.deadline_type || "Normal")
-      setValue(String(work.value))
+      setValue(String(parseValue(work.value)))
       setDomain(work.domain || "")
       setSiteType(work.site_type || "Site Institucional")
       setTemplate(work.template || "")
-      setDeliveryDate(new Date(work.delivery_date).toISOString().split('T')[0])
+      try {
+        const d = new Date(work.delivery_date)
+        if (!isNaN(d.getTime())) {
+          setDeliveryDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+        } else {
+          setDeliveryDate('')
+        }
+      } catch {
+        setDeliveryDate('')
+      }
       setStatus(work.status || "Não Entregue")
       setPaymentStatus(work.payment_status || "Não Pago")
       setObservations(work.observations || "")
@@ -48,20 +66,26 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
     setIsSubmitting(true)
 
     try {
-      const dateObj = new Date(deliveryDate)
+      // Construir data a partir da string YYYY-MM-DD
+      const [year, month, day] = deliveryDate.split('-').map(Number)
+      const dateObj = new Date(year, month - 1, day, 12, 0, 0)
       const deliveryMonth = dateObj.toLocaleDateString('pt-BR', { month: 'long' })
       const deliveryYear = dateObj.getFullYear()
 
       // Detectar se está marcando como "Entregue" para mostrar mensagem apropriada
       const isMarkingAsDelivered = status === "Entregue" && work.status !== "Entregue"
+      
+      // Garantir valor numérico
+      const numericValue = parseValue(value)
 
       await api.updateWork(work.id!, {
-        developer,
+        developer: developer.trim(),
         deadline_type: deadlineType,
-        value,
+        value: numericValue,
         domain: normalizeUrl(domain),
         site_type: siteType,
         template: template.trim() || undefined,
@@ -69,9 +93,9 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
         delivery_month: deliveryMonth.charAt(0).toUpperCase() + deliveryMonth.slice(1),
         delivery_year: deliveryYear,
         status,
-        developer_status: work.developer_status || "Em Andamento",
+        developer_status: status === 'Entregue' ? 'Concluído' : (work.developer_status || "Em Andamento"),
         payment_status: paymentStatus,
-        observations
+        observations: observations.trim()
       })
 
       // Mostrar mensagem apropriada
@@ -81,10 +105,11 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
         toast.success("Projeto atualizado com sucesso!")
       }
       
-      // Fechar modal e atualizar lista ANTES de chamar onSubmitSuccess
-      // Isso garante que o estado seja atualizado corretamente
-      onSubmitSuccess()
+      // Fechar modal primeiro, depois atualizar lista
+      // Isso evita que o modal tente atualizar state de um componente desmontado
       onClose()
+      // Pequeno delay para garantir que o state do modal foi limpo
+      setTimeout(() => onSubmitSuccess(), 100)
     } catch (error) {
       console.error("Erro ao atualizar projeto:", error)
       toast.error(error instanceof Error ? error.message : "Erro ao atualizar projeto")
@@ -97,8 +122,8 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Editar Projeto</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-base">Editar Projeto</DialogTitle>
+          <DialogDescription className="text-xs">
             Atualize as informações do projeto selecionado.
           </DialogDescription>
         </DialogHeader>
@@ -135,7 +160,10 @@ export function EditWorkDialog({ work, isOpen, onClose, onSubmitSuccess }: EditW
                 <Input
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  placeholder="R$ 0,00"
+                  placeholder="200.00"
+                  type="number"
+                  step="0.01"
+                  min="0"
                   className="h-10"
                   required
                 />

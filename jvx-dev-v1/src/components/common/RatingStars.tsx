@@ -14,7 +14,7 @@ export function RatingStars({
   maxRating = 5, 
   size = 'md',
   interactive = false,
-  onChange 
+  onChange
 }: RatingStarsProps) {
   const sizeClasses = {
     sm: 'h-3 w-3',
@@ -29,11 +29,10 @@ export function RatingStars({
   }
 
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-0.5" role={interactive ? "radiogroup" : undefined} aria-label={interactive ? "Avaliação" : undefined}>
       {Array.from({ length: maxRating }, (_, i) => {
         const starValue = i + 1
         const isFilled = rating ? starValue <= rating : false
-        
         return (
           <Star
             key={i}
@@ -43,6 +42,10 @@ export function RatingStars({
               interactive && 'cursor-pointer hover:scale-110 transition-transform'
             )}
             onClick={() => handleClick(starValue)}
+            role={interactive ? "radio" : undefined}
+            aria-checked={interactive ? isFilled : undefined}
+            tabIndex={interactive ? 0 : -1}
+            aria-label={`${starValue} estrela${starValue > 1 ? 's' : ''}`}
           />
         )
       })}

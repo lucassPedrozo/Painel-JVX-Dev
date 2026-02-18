@@ -8,24 +8,36 @@ export function WorksProvider({ children }: { children: React.ReactNode }) {
   const [works, setWorks] = React.useState<Work[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
+  const loadingRef = React.useRef(false)
 
   const loadWorks = React.useCallback(() => {
+    // Prevenir reloads simultâneos
+    if (loadingRef.current) return
+    loadingRef.current = true
     setLoading(true)
     setError(null)
     api.getWorks()
       .then(data => {
         setWorks(data)
         setLoading(false)
+        loadingRef.current = false
       })
       .catch(err => {
         console.error("Erro ao carregar trabalhos:", err)
         setError(err)
         setLoading(false)
+        loadingRef.current = false
       })
   }, [])
 
   React.useEffect(() => {
-    loadWorks()
+    // Só buscar dados se houver token de autenticação
+    const token = localStorage.getItem('jvx_token')
+    if (token) {
+      loadWorks()
+    } else {
+      setLoading(false)
+    }
   }, [loadWorks])
 
   const value = React.useMemo(

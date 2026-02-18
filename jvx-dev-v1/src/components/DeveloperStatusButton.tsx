@@ -21,11 +21,13 @@ export function DeveloperStatusButton({ work, onUpdate }: DeveloperStatusButtonP
   const [loading, setLoading] = React.useState(false)
 
   // Só mostrar para desenvolvedores padrão em seus próprios projetos
-  if (!user || user.role !== 'standard' || work.developer !== user.developerName) {
+  const devName = user?.developerName || user?.developer_name
+  if (!user || user.role !== 'standard' || work.developer !== devName) {
     return null
   }
 
   const handleToggleStatus = async () => {
+    if (loading) return
     setLoading(true)
     try {
       const newStatus = work.developer_status === 'Concluído' ? 'Em Andamento' : 'Concluído'

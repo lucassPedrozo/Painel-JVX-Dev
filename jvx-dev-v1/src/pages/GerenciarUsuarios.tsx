@@ -48,8 +48,19 @@ export default function GerenciarUsuarios() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.username || !formData.password) {
-      toast.error('Preencha todos os campos obrigatórios')
+    if (!formData.username) {
+      toast.error('Preencha o nome de usuário')
+      return
+    }
+
+    // Senha obrigatória apenas para criação, opcional para edição
+    if (!editingUser && !formData.password) {
+      toast.error('Preencha a senha')
+      return
+    }
+
+    if (formData.password && formData.password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres')
       return
     }
 
@@ -60,7 +71,16 @@ export default function GerenciarUsuarios() {
 
     try {
       if (editingUser) {
-        await api.updateUser(editingUser.id, formData)
+        // Construir payload de update: não enviar senha vazia
+        const updatePayload: Record<string, unknown> = {
+          username: formData.username,
+          role: formData.role,
+          developerName: formData.developerName
+        }
+        if (formData.password) {
+          updatePayload.password = formData.password
+        }
+        await api.updateUser(editingUser.id, updatePayload as Partial<User & { password?: string }>)
         toast.success('Usuário atualizado com sucesso')
       } else {
         await api.createUser(formData)
@@ -115,9 +135,9 @@ export default function GerenciarUsuarios() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
-          <p className="text-muted-foreground">Crie e gerencie credenciais de acesso</p>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Usuários</h1>
+          <p className="text-sm text-muted-foreground">Crie e gerencie credenciais de acesso</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -212,12 +232,19 @@ export default function GerenciarUsuarios() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="border-transparent bg-card overflow-hidden">
         <CardHeader>
-          <CardTitle>Usuários do Sistema</CardTitle>
-          <CardDescription>
-            Total de {users.length} usuário(s) cadastrado(s)
-          </CardDescription>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <IconUserShield className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold">Usuários do Sistema</CardTitle>
+              <CardDescription className="text-[11px]">
+                Total de {users.length} usuário(s) cadastrado(s)
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

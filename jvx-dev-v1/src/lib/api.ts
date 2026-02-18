@@ -3,15 +3,35 @@ import type { Work, User, Developer } from '@/types'
 // Re-exportar tipos para compatibilidade
 export type { Work, User, Developer }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+import { API_URL } from '@/lib/api-url'
 
-// Helper para obter token
-const getAuthHeaders = () => {
+// Helper para obter headers de autenticação
+const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('jvx_token')
   return {
     'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : ''
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   }
+}
+
+// Fetch wrapper com tratamento automático de sessão expirada/invalidada
+async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      ...getAuthHeaders(),
+      ...(options.headers as Record<string, string> || {}),
+    }
+  })
+
+  if (response.status === 401) {
+    localStorage.removeItem('jvx_token')
+    localStorage.removeItem('jvx_user')
+    window.dispatchEvent(new CustomEvent('auth:session-expired'))
+    throw new Error('Sessão expirada. Faça login novamente.')
+  }
+
+  return response
 }
 
 export interface APIUser {
@@ -25,9 +45,7 @@ export interface APIUser {
 
 export const api = {
   async getWorks(): Promise<Work[]> {
-    const response = await fetch(`${API_URL}/works`, {
-      headers: getAuthHeaders()
-    })
+    const response = await apiFetch('/works')
     if (!response.ok) throw new Error('Erro ao carregar trabalhos')
     const data = await response.json()
     return data.map((w: Record<string, unknown>) => {
@@ -50,78 +68,108 @@ export const api = {
   },
 
   async createWork(work: Omit<Work, 'id'>): Promise<Work> {
-    const response = await fetch(`${API_URL}/works`, {
+    // Converter delivery_date para formato YYYY-MM-DD que o backend/MySQL espera
+    let deliveryDateStr: string
+    if (typeof work.delivery_date === 'number') {
+      const d = new Date(work.delivery_date)
+      deliveryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    } else if (typeof work.delivery_date === 'string' && work.delivery_date.includes('T')) {
+      deliveryDateStr = work.delivery_date.split('T')[0]
+    } else {
+      deliveryDateStr = String(work.delivery_date)
+    }
+
+    const response = await apiFetch('/works', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({
         ...work,
-        delivery_date: new Date(work.delivery_date).toISOString(),
+        delivery_date: deliveryDateStr,
+        value: typeof work.value === 'string' ? parseFloat(work.value) || 0 : work.value,
         developer_status: work.developer_status || 'Em Andamento',
-        observations: work.observations || null
+        observations: work.observations || null,
+        template: work.template || null
       })
     })
-    if (!response.ok) throw new Error('Erro ao criar trabalho')
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro ao criar trabalho' }))
+      throw new Error(error.error || 'Erro ao criar trabalho')
+    }
     return response.json()
   },
 
   async updateWork(id: number, work: Omit<Work, 'id'>): Promise<Work> {
-    const response = await fetch(`${API_URL}/works/${id}`, {
+    // Converter delivery_date para formato YYYY-MM-DD que o backend/MySQL espera
+    let deliveryDateStr: string
+    if (typeof work.delivery_date === 'number') {
+      const d = new Date(work.delivery_date)
+      deliveryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    } else if (typeof work.delivery_date === 'string' && work.delivery_date.includes('T')) {
+      deliveryDateStr = work.delivery_date.split('T')[0]
+    } else {
+      deliveryDateStr = String(work.delivery_date)
+    }
+
+    const response = await apiFetch(`/works/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify({
         ...work,
-        delivery_date: new Date(work.delivery_date).toISOString(),
-        observations: work.observations || null
+        delivery_date: deliveryDateStr,
+        value: typeof work.value === 'string' ? parseFloat(String(work.value)) || 0 : work.value,
+        observations: work.observations || null,
+        template: work.template || null
       })
     })
     if (!response.ok) {
-      const error = await response.json()
+      const error = await response.json().catch(() => ({ error: 'Erro ao atualizar trabalho' }))
       throw new Error(error.error || 'Erro ao atualizar trabalho')
+    }
+    const data = await response.json()
+    // O backend retorna { success, message, updatedWork } - extrair o work atualizado
+    return data.updatedWork || data
+  },
+
+  async updateDeveloperStatus(id: number, status: 'Em Andamento' | 'Concluído'): Promise<{ success: boolean; developer_status: string; completed_at: string | null; completed_by: string | null }> {
+    const response = await apiFetch(`/works/${id}/mark-completed`, {
+      method: 'PATCH',
+      body: JSON.stringify({ developer_status: status })
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro ao atualizar status' }))
+      throw new Error(error.error || 'Erro ao atualizar status')
     }
     return response.json()
   },
 
-  async updateDeveloperStatus(id: number, status: 'Em Andamento' | 'Concluído'): Promise<void> {
-    const response = await fetch(`${API_URL}/works/${id}/mark-completed`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ developer_status: status })
+  async deleteWork(id: number): Promise<void> {
+    const response = await apiFetch(`/works/${id}`, {
+      method: 'DELETE'
     })
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Erro ao atualizar status')
+      const error = await response.json().catch(() => ({ error: 'Erro ao deletar trabalho' }))
+      throw new Error(error.error || 'Erro ao deletar trabalho')
     }
   },
 
-  async deleteWork(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/works/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
-    if (!response.ok) throw new Error('Erro ao deletar trabalho')
-  },
-
   async markAsPaid(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/works/${id}/mark-paid`, {
-      method: 'PATCH',
-      headers: getAuthHeaders()
+    const response = await apiFetch(`/works/${id}/mark-paid`, {
+      method: 'PATCH'
     })
-    if (!response.ok) throw new Error('Erro ao marcar como pago')
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro ao marcar como pago' }))
+      throw new Error(error.error || 'Erro ao marcar como pago')
+    }
   },
 
   // Rotas de usuários
   async getUsers(): Promise<User[]> {
-    const response = await fetch(`${API_URL}/users`, {
-      headers: getAuthHeaders()
-    })
+    const response = await apiFetch('/users')
     if (!response.ok) throw new Error('Erro ao carregar usuários')
     return response.json()
   },
 
   async createUser(userData: { username: string; password: string; role: string; developerName?: string }): Promise<void> {
-    const response = await fetch(`${API_URL}/users`, {
+    const response = await apiFetch('/users', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(userData)
     })
     if (!response.ok) {
@@ -131,9 +179,8 @@ export const api = {
   },
 
   async updateUser(id: number, userData: Partial<User & { password?: string }>): Promise<void> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
+    const response = await apiFetch(`/users/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify(userData)
     })
     if (!response.ok) {
@@ -143,9 +190,8 @@ export const api = {
   },
 
   async deleteUser(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
+    const response = await apiFetch(`/users/${id}`, {
+      method: 'DELETE'
     })
     if (!response.ok) {
       const error = await response.json()
@@ -188,6 +234,8 @@ export const api = {
             // 8: Status
             // 9: Pagamento
             // 10: OBS ou Template
+            // 11: Status Desenvolvedor (opcional)
+            // 12: Template URL (opcional)
             
             return {
               developer: values[0] || 'Interno',
@@ -200,13 +248,14 @@ export const api = {
               delivery_year: parseInt(values[7]) || new Date().getFullYear(),
               status: values[8] || 'Não Entregue',
               payment_status: values[9] || 'Não Pago',
-              observations: values[10] || ''
+              observations: values[10] || '',
+              developer_status: values[11] || 'Em Andamento',
+              template: values[12] || ''
             }
           })
 
-          const response = await fetch(`${API_URL}/import/csv`, {
+          const response = await apiFetch('/import/csv', {
             method: 'POST',
-            headers: getAuthHeaders(),
             body: JSON.stringify({ csvData })
           })
 
@@ -229,9 +278,8 @@ export const api = {
 
   // Limpar banco de dados
   async clearDatabase(password: string): Promise<void> {
-    const response = await fetch(`${API_URL}/database/clear`, {
+    const response = await apiFetch('/database/clear', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ password })
     })
     if (!response.ok) {

@@ -25,8 +25,8 @@ export function RecentActivity({ works }: RecentActivityProps) {
           <div key={work.id || index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
             <div className={`p-2 rounded-lg flex-shrink-0 ${
               work.status === 'Entregue' 
-                ? 'bg-green-100 text-green-600 dark:bg-green-950' 
-                : 'bg-orange-100 text-orange-600 dark:bg-orange-950'
+                ? 'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400' 
+                : 'bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'
             }`}>
               {work.status === 'Entregue' ? (
                 <CheckCircle className="h-4 w-4" />
@@ -46,8 +46,8 @@ export function RecentActivity({ works }: RecentActivityProps) {
                   <p className="text-xs text-muted-foreground">{formatDate(work.delivery_date)}</p>
                   <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-md mt-1 ${
                     work.payment_status === 'Pago' 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-950' 
-                      : 'bg-red-100 text-red-600 dark:bg-red-950'
+                      ? 'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400' 
+                      : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
                   }`}>
                     {work.payment_status === 'Pago' ? (
                       <CheckCircle className="h-3 w-3 mr-1" />

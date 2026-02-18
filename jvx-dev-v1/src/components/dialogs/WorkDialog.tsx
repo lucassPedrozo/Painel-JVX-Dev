@@ -52,31 +52,36 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
     setIsSubmitting(true)
 
     try {
-      // Converter data para timestamp
-      const dateObj = new Date(deliveryDate + 'T12:00:00')
+      // Construir data a partir da string YYYY-MM-DD
+      const [year, month, day] = deliveryDate.split('-').map(Number)
+      const dateObj = new Date(year, month - 1, day, 12, 0, 0)
       const timestamp = dateObj.getTime()
       
       // Extrair mês e ano
-      const month = dateObj.toLocaleDateString('pt-BR', { month: 'long' })
-      const year = dateObj.getFullYear()
+      const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'long' })
+      const yearNum = dateObj.getFullYear()
+      
+      // Garantir valor numérico
+      const numericValue = parseFloat(value) || 0
 
       await api.createWork({
-        developer,
+        developer: developer.trim(),
         deadline_type: deadlineType,
-        value: parseFloat(value) || 0,
-        domain,
+        value: numericValue,
+        domain: domain.trim(),
         site_type: siteType,
-        template: template || undefined,
+        template: template.trim() || undefined,
         delivery_date: timestamp,
-        delivery_month: month.charAt(0).toUpperCase() + month.slice(1),
-        delivery_year: year,
+        delivery_month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        delivery_year: yearNum,
         status: 'Não Entregue',
         developer_status: 'Em Andamento',
         payment_status: paymentStatus,
-        observations
+        observations: observations.trim()
       })
 
       toast.success("Trabalho adicionado com sucesso!")
@@ -94,16 +99,16 @@ export function WorkDialog({ onSubmitSuccess }: WorkDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <IconPlus className="h-4 w-4 mr-2" />
-          Adicionar Projeto
+        <Button size="sm">
+          <IconPlus className="h-3.5 w-3.5 mr-1.5" />
+          Novo Projeto
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Projeto</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-base">Novo Projeto</DialogTitle>
+          <DialogDescription className="text-xs">
             Preencha os dados do novo projeto de desenvolvimento.
           </DialogDescription>
         </DialogHeader>

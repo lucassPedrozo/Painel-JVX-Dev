@@ -45,7 +45,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
 
   return (
     <TooltipProvider>
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border/50 bg-card overflow-hidden">
         <div className="relative">
           <div className="overflow-auto max-h-[calc(100vh-28rem)]">
             <table className="w-full text-sm border-collapse">
@@ -110,8 +110,8 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                   <tr>
                     <td colSpan={12} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                        <span>Carregando projetos...</span>
+                        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
+                        <span className="text-sm">Carregando projetos...</span>
                       </div>
                     </td>
                   </tr>
@@ -275,21 +275,21 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
         </div>
 
         {/* Footer fixo com paginação */}
-        <div className="border-t bg-muted/30">
-          <div className="p-4">
+        <div className="border-t border-border/50 bg-muted/20">
+          <div className="px-4 py-3">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               {/* Resumo */}
-              <div className="flex items-center gap-6 text-sm">
-                <span className="font-semibold">
-                  Total: {works.length} {works.length === 1 ? 'projeto' : 'projetos'}
+              <div className="flex items-center gap-4 text-xs">
+                <span className="font-semibold text-sm">
+                  {works.length} {works.length === 1 ? 'projeto' : 'projetos'}
                 </span>
                 <span className="text-muted-foreground">
                   Receita: <span className="font-bold text-foreground">{formatCurrency(works.reduce((acc, work) => acc + parseValue(work.value), 0))}</span>
                 </span>
-                <span className="text-green-600 dark:text-green-400">
+                <span className="text-emerald-600">
                   Pagos: {works.filter(w => w.payment_status === "Pago").length}
                 </span>
-                <span className="text-red-600 dark:text-red-400">
+                <span className="text-rose-600">
                   Pendentes: {works.filter(w => w.payment_status !== "Pago").length}
                 </span>
               </div>

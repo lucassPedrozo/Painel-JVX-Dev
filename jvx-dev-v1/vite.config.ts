@@ -1,7 +1,7 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig } from "vitest/config"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,6 +10,17 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/__tests__/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**', 'src/components/**', 'src/contexts/**'],
+      exclude: ['src/**/*.test.*', 'src/__tests__/**']
+    }
   },
   build: {
     rollupOptions: {
@@ -24,7 +35,7 @@ export default defineConfig({
             '@radix-ui/react-popover'
           ],
           'chart-vendor': ['recharts'],
-          'utils-vendor': ['sonner', 'date-fns']
+          'utils-vendor': ['sonner']
         }
       }
     },
@@ -33,6 +44,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000
   },
   server: {
+    host: true,
+    port: 5173,
+    open: true,
     hmr: {
       overlay: false
     }

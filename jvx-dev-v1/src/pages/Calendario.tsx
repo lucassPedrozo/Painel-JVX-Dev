@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { ChevronLeft, ChevronRight, Clock, CheckCircle, DollarSign } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, CheckCircle, DollarSign, AlertTriangle, CalendarCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common'
@@ -20,52 +21,67 @@ function Calendario() {
     return Array.from(devs).sort()
   }, [works])
 
-  // Calcular status do projeto baseado em finalização e pagamento
+  // Calcular status do projeto baseado em conclusão e pagamento
   const getProjectStatus = (work: Work) => {
     const projectDate = new Date(work.delivery_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    projectDate.setHours(0, 0, 0, 0)
-    
+    const todayRaw = new Date()
+    const today = new Date(todayRaw.getFullYear(), todayRaw.getMonth(), todayRaw.getDate())
+
     const isPaid = work.payment_status === 'Pago'
     const isCompleted = work.developer_status === 'Concluído'
-    
-    // Calcular primeiro dia do mês seguinte à data do projeto
-    const nextMonthFirstDay = new Date(projectDate.getFullYear(), projectDate.getMonth() + 1, 1)
-    nextMonthFirstDay.setHours(0, 0, 0, 0)
-    
-    const isPastPaymentDeadline = today >= nextMonthFirstDay
-    
-    // Prioridade 1: Pagamento Pendente (finalizado, não pago, passou do dia 1 do mês seguinte)
-    if (isCompleted && !isPaid && isPastPaymentDeadline) {
-      const daysPending = Math.ceil((today.getTime() - nextMonthFirstDay.getTime()) / (1000 * 60 * 60 * 24))
-      return { 
-        status: 'payment-pending', 
-        label: 'Pagamento Pendente', 
-        color: 'bg-yellow-500', 
-        days: daysPending,
+
+    // Prazo de pagamento: dia 5 do mês seguinte à data do projeto
+    const paymentDeadline = new Date(projectDate.getFullYear(), projectDate.getMonth() + 1, 5)
+
+    // 1. Finalizado — Concluído + Pago
+    if (isCompleted && isPaid) {
+      return {
+        status: 'completed' as const,
+        label: 'Finalizado',
+        calendarColor: 'bg-emerald-500/80',
+        textColor: 'text-white',
+        days: 0,
+        priority: 4
+      }
+    }
+
+    // 2. Atrasado — Concluído, não pago, e hoje já passou o dia 5 do mês seguinte
+    if (isCompleted && !isPaid && today >= paymentDeadline) {
+      const daysLate = Math.ceil((today.getTime() - paymentDeadline.getTime()) / (1000 * 60 * 60 * 24))
+      return {
+        status: 'overdue' as const,
+        label: 'Atrasado',
+        calendarColor: 'bg-red-500/80',
+        textColor: 'text-white',
+        days: daysLate,
         priority: 1
       }
     }
-    
-    // Prioridade 2: Concluído e Pago
-    if (isPaid && isCompleted) {
-      return { 
-        status: 'completed', 
-        label: 'Concluído e Pago', 
-        color: 'bg-green-500', 
-        days: 0,
-        priority: 3
+
+    // 3. Pgto Pendente — Concluído, não pago, ainda dentro do prazo (antes do dia 5 do mês seguinte)
+    if (isCompleted && !isPaid) {
+      const daysUntilDeadline = Math.ceil((paymentDeadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      return {
+        status: 'payment-pending' as const,
+        label: 'Pgto. Pendente',
+        calendarColor: 'bg-amber-500/80',
+        textColor: 'text-white',
+        days: daysUntilDeadline,
+        priority: 2
       }
     }
-    
-    // Prioridade 3: No Prazo (todos os outros casos)
-    return { 
-      status: 'ontime', 
-      label: 'No Prazo', 
-      color: 'bg-blue-500', 
-      days: 0,
-      priority: 2
+
+    // 4. No Prazo — Dev ainda não concluiu
+    const projectDay = new Date(projectDate.getFullYear(), projectDate.getMonth(), projectDate.getDate())
+    const diff = Math.ceil((projectDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const label = diff < 0 ? 'Em desenvolvimento' : diff === 0 ? 'Hoje' : `${diff}d restantes`
+    return {
+      status: 'ontime' as const,
+      label,
+      calendarColor: 'bg-sky-500/80',
+      textColor: 'text-white',
+      days: diff,
+      priority: 3
     }
   }
 
@@ -127,9 +143,10 @@ function Calendario() {
   // Estatísticas de projetos
   const projectStats = React.useMemo(() => {
     const stats = {
+      overdue: 0,
       'payment-pending': 0,
-      completed: 0,
-      ontime: 0
+      ontime: 0,
+      completed: 0
     }
     
     filteredWorks.forEach(work => {
@@ -148,46 +165,58 @@ function Calendario() {
       />
 
       {/* Estatísticas de Projetos */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card shadow-sm p-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-950">
-              <DollarSign className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Pagamento Pendente</p>
-              <p className="text-2xl font-bold">{projectStats['payment-pending']}</p>
+              <p className="text-xs font-medium text-muted-foreground">Atrasados</p>
+              <p className="text-xl font-bold tracking-tight text-red-600 dark:text-red-400">{projectStats.overdue}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-xl border bg-card shadow-sm p-4">
+        <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950">
-              <Clock className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <DollarSign className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">No Prazo</p>
-              <p className="text-2xl font-bold">{projectStats.ontime}</p>
+              <p className="text-xs font-medium text-muted-foreground">Pgto. Pendente</p>
+              <p className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{projectStats['payment-pending']}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-xl border bg-card shadow-sm p-4">
+        <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 text-green-600 dark:bg-green-950">
-              <CheckCircle className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <Clock className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Concluídos e Pagos</p>
-              <p className="text-2xl font-bold">{projectStats.completed}</p>
+              <p className="text-xs font-medium text-muted-foreground">No Prazo</p>
+              <p className="text-xl font-bold tracking-tight text-sky-600 dark:text-sky-400">{projectStats.ontime}</p>
             </div>
           </div>
-        </div>
+        </Card>
+
+        <Card className="p-4 border-transparent bg-card">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CalendarCheck className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Finalizados</p>
+              <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{projectStats.completed}</p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Controles e Filtros */}
-      <div className="rounded-xl border bg-card shadow-sm p-4">
+      <Card className="p-4 border-transparent bg-card">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={previousMonth}>
@@ -220,18 +249,19 @@ function Calendario() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="payment-pending">Pagamento Pendente</SelectItem>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="overdue">Atrasados</SelectItem>
+                <SelectItem value="payment-pending">Pgto. Pendente</SelectItem>
                 <SelectItem value="ontime">No Prazo</SelectItem>
-                <SelectItem value="completed">Concluídos e Pagos</SelectItem>
+                <SelectItem value="completed">Finalizados</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Calendário */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
         {/* Cabeçalho dos dias da semana */}
         <div className="grid grid-cols-7 border-b bg-muted/50">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
@@ -272,21 +302,24 @@ function Calendario() {
                             key={work.id}
                             className={cn(
                               "text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity",
-                              status.color,
-                              "text-white"
+                              status.calendarColor,
+                              status.textColor
                             )}
-                            title={`${work.site_type} - ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}\nPagamento: ${work.payment_status}`}
+                            title={`${work.site_type} — ${work.developer}\n${formatCurrency(parseValue(work.value))}\nStatus: ${status.label}\nDev: ${work.developer_status}\nPagamento: ${work.payment_status}`}
                           >
                             <div className="font-medium truncate">{work.site_type}</div>
-                            <div className="text-[10px] opacity-90 truncate">{work.developer}</div>
+                            <div className="text-[10px] opacity-80 truncate">{work.developer}</div>
                             {status.status === 'payment-pending' && (
-                              <div className="text-[10px] font-bold opacity-100">💰 Pagar</div>
+                              <div className="text-[10px] font-bold mt-0.5">💰 {status.days}d p/ vencer</div>
+                            )}
+                            {status.status === 'overdue' && (
+                              <div className="text-[10px] font-bold mt-0.5">⚠ {status.days}d atraso pgto.</div>
                             )}
                           </div>
                         )
                       })}
                       {worksForDay.length > 3 && (
-                        <div className="text-xs text-muted-foreground text-center">
+                        <div className="text-xs text-muted-foreground text-center font-medium">
                           +{worksForDay.length - 3} mais
                         </div>
                       )}
@@ -302,80 +335,111 @@ function Calendario() {
       {/* Lista de Projetos por Status */}
       <div className="rounded-xl border bg-card shadow-sm p-6">
         <h3 className="text-lg font-bold mb-4">Projetos por Status</h3>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredWorks
             .map(work => ({ work, status: getProjectStatus(work) }))
             .sort((a, b) => a.status.priority - b.status.priority)
-            .slice(0, 15)
+            .slice(0, 20)
             .map(({ work, status }) => {
+              // Mapear status → cor da badge
+              const badgeClassName = cn(
+                "flex-shrink-0 text-[11px]",
+                status.status === 'overdue' && "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/20 hover:bg-red-500/20",
+                status.status === 'payment-pending' && "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20",
+                status.status === 'ontime' && "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/20 hover:bg-sky-500/20",
+                status.status === 'completed' && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+              )
+
+              // Cor da barra lateral
+              const barColor = cn(
+                "w-1 h-12 rounded-full flex-shrink-0",
+                status.status === 'overdue' && "bg-red-500",
+                status.status === 'payment-pending' && "bg-amber-500",
+                status.status === 'ontime' && "bg-sky-500",
+                status.status === 'completed' && "bg-emerald-500"
+              )
+
+              // Texto de detalhe
+              const detailText = status.status === 'completed'
+                ? 'Finalizado'
+                : status.status === 'payment-pending'
+                ? `${status.days}d p/ vencer`
+                : status.status === 'overdue'
+                ? `${status.days}d de atraso no pgto.`
+                : status.label
+
               return (
-                <div key={work.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className={cn("w-1 h-12 rounded-full flex-shrink-0", status.color)} />
+                <div key={work.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={barColor} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-medium truncate">{work.site_type}</span>
-                        <Badge 
-                          variant={status.status === 'completed' ? 'default' : status.status === 'payment-pending' ? 'secondary' : 'destructive'} 
-                          className={cn(
-                            "flex-shrink-0",
-                            status.status === 'payment-pending' && "bg-yellow-500 text-white hover:bg-yellow-600"
-                          )}
-                        >
+                        <span className="text-sm font-medium truncate">{work.site_type}</span>
+                        <Badge variant="outline" className={badgeClassName}>
                           {status.label}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {work.developer} • Data: {formatDate(work.delivery_date)} • {work.payment_status}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {work.developer} • {formatDate(work.delivery_date)} • {work.payment_status}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {work.domain}
-                      </p>
+                      {work.domain && (
+                        <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                          {work.domain}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
-                    <p className="font-bold whitespace-nowrap">{formatCurrency(parseValue(work.value))}</p>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {status.status === 'completed' 
-                        ? 'Pago e Concluído' 
-                        : status.status === 'payment-pending'
-                        ? `${status.days}d pendente`
-                        : 'Em andamento'
-                      }
+                    <p className="text-sm font-bold whitespace-nowrap">{formatCurrency(parseValue(work.value))}</p>
+                    <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                      {detailText}
                     </p>
                   </div>
                 </div>
               )
             })}
+          {filteredWorks.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhum projeto encontrado com os filtros selecionados.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Legenda */}
       <div className="rounded-xl border bg-muted/50 p-4">
         <h4 className="font-semibold mb-3 text-sm">Legenda de Status</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-            <span className="text-sm">Pagamento Pendente</span>
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <span className="text-sm">Atrasado</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <span className="text-sm">Pgto. Pendente</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-sky-500" />
             <span className="text-sm">No Prazo</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span className="text-sm">Concluído e Pago</span>
+            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <span className="text-sm">Finalizado</span>
           </div>
         </div>
         <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
           <p>
-            <strong>Pagamento Pendente:</strong> Projetos finalizados e não pagos após o dia 1 do mês seguinte à data de cadastro
+            <strong className="text-red-600 dark:text-red-400">Atrasado:</strong> Concluído pelo dev, não pago, e já passou o dia 5 do mês seguinte à data do projeto
           </p>
           <p>
-            <strong>No Prazo:</strong> Projetos em andamento ou aguardando pagamento dentro do prazo
+            <strong className="text-amber-600 dark:text-amber-400">Pgto. Pendente:</strong> Concluído pelo dev, não pago, mas ainda dentro do prazo (até dia 5 do mês seguinte)
           </p>
           <p>
-            <strong>Concluído e Pago:</strong> Projetos finalizados e com pagamento confirmado
+            <strong className="text-sky-600 dark:text-sky-400">No Prazo:</strong> Projeto ainda não concluído pelo desenvolvedor
+          </p>
+          <p>
+            <strong className="text-emerald-600 dark:text-emerald-400">Finalizado:</strong> Concluído pelo dev e pagamento confirmado
           </p>
         </div>
       </div>
