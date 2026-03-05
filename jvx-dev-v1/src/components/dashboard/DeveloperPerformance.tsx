@@ -2,12 +2,14 @@ import * as React from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 interface DeveloperPerformanceProps {
   works: Work[]
 }
 
 export function DeveloperPerformance({ works }: DeveloperPerformanceProps) {
+  const { sensitive } = useHideValues()
   const projectData = React.useMemo(() => {
     const devData = new Map<string, { delivered: number, pending: number, paid: number, total: number, revenue: number }>()
     
@@ -65,10 +67,10 @@ export function DeveloperPerformance({ works }: DeveloperPerformanceProps) {
         <div className="bg-card border rounded-lg shadow-lg p-3">
           <p className="font-semibold text-sm mb-2">{data.name}</p>
           <p className="text-xs font-semibold text-foreground">Total: {data.total} projetos</p>
-          <p className="text-xs text-green-600 dark:text-green-400">Entregues: {data.entregues}</p>
-          <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes: {data.pendentes}</p>
-          <p className="text-xs text-blue-600 dark:text-blue-400">Pagos: {data.pagos}</p>
-          <p className="text-xs text-muted-foreground mt-1">Receita: {formatCurrency(data.receita)}</p>
+          <p className="text-xs text-green-600">Entregues: {data.entregues}</p>
+          <p className="text-xs text-orange-600">Pendentes: {data.pendentes}</p>
+          <p className="text-xs text-blue-600">Pagos: {data.pagos}</p>
+          <p className="text-xs text-muted-foreground mt-1">Receita: {sensitive(formatCurrency(data.receita))}</p>
         </div>
       )
     }

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronLeft, ChevronRight, Clock, CheckCircle, DollarSign, AlertTriangle, CalendarCheck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, DollarSign, AlertTriangle, CalendarCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -168,48 +168,48 @@ function Calendario() {
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Atrasados</p>
-              <p className="text-xl font-bold tracking-tight text-red-600 dark:text-red-400">{projectStats.overdue}</p>
+              <p className="text-xl font-bold tracking-tight text-red-600">{projectStats.overdue}</p>
             </div>
           </div>
         </Card>
 
         <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
               <DollarSign className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Pgto. Pendente</p>
-              <p className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{projectStats['payment-pending']}</p>
+              <p className="text-xl font-bold tracking-tight text-amber-600">{projectStats['payment-pending']}</p>
             </div>
           </div>
         </Card>
 
         <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
               <Clock className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">No Prazo</p>
-              <p className="text-xl font-bold tracking-tight text-sky-600 dark:text-sky-400">{projectStats.ontime}</p>
+              <p className="text-xl font-bold tracking-tight text-sky-600">{projectStats.ontime}</p>
             </div>
           </div>
         </Card>
 
         <Card className="p-4 border-transparent bg-card">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
               <CalendarCheck className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Finalizados</p>
-              <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{projectStats.completed}</p>
+              <p className="text-xl font-bold tracking-tight text-emerald-600">{projectStats.completed}</p>
             </div>
           </div>
         </Card>
@@ -344,10 +344,10 @@ function Calendario() {
               // Mapear status → cor da badge
               const badgeClassName = cn(
                 "flex-shrink-0 text-[11px]",
-                status.status === 'overdue' && "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/20 hover:bg-red-500/20",
-                status.status === 'payment-pending' && "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20",
-                status.status === 'ontime' && "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/20 hover:bg-sky-500/20",
-                status.status === 'completed' && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                status.status === 'overdue' && "bg-red-500/15 text-red-700 border-red-500/20 hover:bg-red-500/20",
+                status.status === 'payment-pending' && "bg-amber-500/15 text-amber-700 border-amber-500/20 hover:bg-amber-500/20",
+                status.status === 'ontime' && "bg-sky-500/15 text-sky-700 border-sky-500/20 hover:bg-sky-500/20",
+                status.status === 'completed' && "bg-emerald-500/15 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20"
               )
 
               // Cor da barra lateral
@@ -430,16 +430,16 @@ function Calendario() {
         </div>
         <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
           <p>
-            <strong className="text-red-600 dark:text-red-400">Atrasado:</strong> Concluído pelo dev, não pago, e já passou o dia 5 do mês seguinte à data do projeto
+            <strong className="text-red-600">Atrasado:</strong> Concluído pelo dev, não pago, e já passou o dia 5 do mês seguinte à data do projeto
           </p>
           <p>
-            <strong className="text-amber-600 dark:text-amber-400">Pgto. Pendente:</strong> Concluído pelo dev, não pago, mas ainda dentro do prazo (até dia 5 do mês seguinte)
+            <strong className="text-amber-600">Pgto. Pendente:</strong> Concluído pelo dev, não pago, mas ainda dentro do prazo (até dia 5 do mês seguinte)
           </p>
           <p>
-            <strong className="text-sky-600 dark:text-sky-400">No Prazo:</strong> Projeto ainda não concluído pelo desenvolvedor
+            <strong className="text-sky-600">No Prazo:</strong> Projeto ainda não concluído pelo desenvolvedor
           </p>
           <p>
-            <strong className="text-emerald-600 dark:text-emerald-400">Finalizado:</strong> Concluído pelo dev e pagamento confirmado
+            <strong className="text-emerald-600">Finalizado:</strong> Concluído pelo dev e pagamento confirmado
           </p>
         </div>
       </div>

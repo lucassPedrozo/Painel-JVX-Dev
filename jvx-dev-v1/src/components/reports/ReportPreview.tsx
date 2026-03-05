@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Download, FileText, X } from 'lucide-react'
 import { formatCurrency, formatDate, parseValue } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 import { generatePDF } from '@/lib/pdf-export'
 import { toast } from 'sonner'
 import type { Work } from '@/types'
@@ -16,6 +17,7 @@ interface ReportPreviewProps {
 }
 
 export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: ReportPreviewProps) {
+  const { sensitive } = useHideValues()
   const stats = React.useMemo(() => {
     const totalWorks = works.length
     const paidWorks = works.filter(w => w.payment_status?.toLowerCase() === 'pago').length
@@ -62,7 +64,7 @@ export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: 
               </div>
               <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-4 text-white min-w-[140px]">
                 <div className="text-xs opacity-90 mb-1">Valor Total</div>
-                <div className="text-2xl font-bold">{formatCurrency(stats.totalValue)}</div>
+                <div className="text-2xl font-bold">{sensitive(formatCurrency(stats.totalValue))}</div>
               </div>
             </div>
 
@@ -89,12 +91,12 @@ export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: 
                       {/* Valor / Status */}
                       <div className="min-w-0">
                         <div className="text-xs text-muted-foreground mb-1">Valor / Status</div>
-                        <div className={`text-sm font-semibold ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {formatCurrency(parseValue(work.value))}
+                        <div className={`text-sm font-semibold ${isPaid ? 'text-green-600' : 'text-red-600'}`}>
+                          {sensitive(formatCurrency(parseValue(work.value)))}
                         </div>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium mt-1 ${isPaid
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
                           }`}>
                           {work.payment_status}
                         </span>
@@ -145,14 +147,14 @@ export function ReportPreview({ isOpen, onClose, works, title, onDownloadCSV }: 
                 </div>
                 <div>
                   <span className="text-muted-foreground">Valor Recebido:</span>
-                  <span className="ml-2 font-bold text-base text-green-600 dark:text-green-400">
-                    {formatCurrency(stats.paidValue)}
+                  <span className="ml-2 font-bold text-base text-green-600">
+                    {sensitive(formatCurrency(stats.paidValue))}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Valor Pendente:</span>
-                  <span className="ml-2 font-bold text-base text-red-600 dark:text-red-400">
-                    {formatCurrency(stats.pendingValue)}
+                  <span className="ml-2 font-bold text-base text-red-600">
+                    {sensitive(formatCurrency(stats.pendingValue))}
                   </span>
                 </div>
               </div>

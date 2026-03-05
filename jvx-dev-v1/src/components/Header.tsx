@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom"
-import { ModeToggle } from "@/components/ui/mode-toggle"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/AuthContext"
+import { useHideValues } from "@/contexts/HideValuesContext"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Globe, BarChart3, Calendar, Users, FileText, Settings, LogOut, UserCog, User, Wrench } from "lucide-react"
+import { LayoutDashboard, Globe, BarChart3, Calendar, Users, FileText, Settings, LogOut, UserCog, User, Wrench, Eye, EyeOff } from "lucide-react"
 import logoImg from "@/assets/favicon.png"
 
 const routes = [
@@ -54,6 +55,7 @@ const routes = [
 export function Header() {
   const location = useLocation()
   const { user, logout, isMaster } = useAuth()
+  const { valuesHidden, toggleValues } = useHideValues()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60" role="navigation" aria-label="Menu principal">
@@ -101,7 +103,28 @@ export function Header() {
 
         {/* Ações */}
         <div className="flex items-center gap-1.5">
-          <ModeToggle />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleValues}
+                  aria-label={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+                >
+                  {valuesHidden ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">{valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {/* Menu do Usuário */}
           <DropdownMenu>

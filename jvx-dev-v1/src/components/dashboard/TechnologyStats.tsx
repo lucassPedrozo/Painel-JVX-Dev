@@ -2,12 +2,14 @@ import * as React from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 interface TechnologyStatsProps {
   works: Work[]
 }
 
 export function TechnologyStats({ works }: TechnologyStatsProps) {
+  const { sensitive } = useHideValues()
   const data = React.useMemo(() => {
     const deadlineData = new Map<string, { count: number, value: number }>()
     
@@ -48,7 +50,7 @@ export function TechnologyStats({ works }: TechnologyStatsProps) {
         <div className="bg-card border rounded-lg shadow-lg p-3">
           <p className="font-semibold text-sm mb-1">{data.name}</p>
           <p className="text-xs text-muted-foreground">Projetos: {data.projetos}</p>
-          <p className="text-xs text-muted-foreground">Valor Total: {formatCurrency(data.valor)}</p>
+          <p className="text-xs text-muted-foreground">Valor Total: {sensitive(formatCurrency(data.valor))}</p>
         </div>
       )
     }

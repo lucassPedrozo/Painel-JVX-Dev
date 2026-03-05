@@ -2,12 +2,14 @@ import * as React from 'react'
 import { CheckCircle, XCircle, Clock } from 'lucide-react'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 interface RecentActivityProps {
   works: Work[]
 }
 
 export function RecentActivity({ works }: RecentActivityProps) {
+  const { sensitive } = useHideValues()
   const recentWorks = React.useMemo(() => {
     return [...works]
       .sort((a, b) => new Date(b.delivery_date).getTime() - new Date(a.delivery_date).getTime())
@@ -25,8 +27,8 @@ export function RecentActivity({ works }: RecentActivityProps) {
           <div key={work.id || index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
             <div className={`p-2 rounded-lg flex-shrink-0 ${
               work.status === 'Entregue' 
-                ? 'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400' 
-                : 'bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'
+                ? 'bg-green-100 text-green-600' 
+                : 'bg-orange-100 text-orange-600'
             }`}>
               {work.status === 'Entregue' ? (
                 <CheckCircle className="h-4 w-4" />
@@ -42,12 +44,12 @@ export function RecentActivity({ works }: RecentActivityProps) {
                   <p className="text-xs text-muted-foreground">{work.site_type}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold">{formatCurrency(parseValue(work.value))}</p>
+                  <p className="text-sm font-bold">{sensitive(formatCurrency(parseValue(work.value)))}</p>
                   <p className="text-xs text-muted-foreground">{formatDate(work.delivery_date)}</p>
                   <div className={`inline-flex items-center text-xs px-2 py-0.5 rounded-md mt-1 ${
                     work.payment_status === 'Pago' 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400' 
-                      : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                      ? 'bg-green-100 text-green-600' 
+                      : 'bg-red-100 text-red-600'
                   }`}>
                     {work.payment_status === 'Pago' ? (
                       <CheckCircle className="h-3 w-3 mr-1" />

@@ -82,7 +82,7 @@ export function UnifiedStatusBadge({ work, onUpdate }: UnifiedStatusBadgeProps) 
       className={`h-7 px-3 text-xs font-medium transition-all ${
         isCompleted 
           ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-          : 'border-orange-300 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950'
+          : 'border-orange-300 text-orange-600 hover:bg-orange-50'
       } ${canEdit ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
       onClick={canEdit ? handleToggleStatus : undefined}
       disabled={loading || !canEdit}

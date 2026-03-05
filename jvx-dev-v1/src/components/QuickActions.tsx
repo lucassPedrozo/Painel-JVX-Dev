@@ -162,7 +162,7 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
               
               <DropdownMenuItem 
                 onClick={handleDeleteClick}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950 cursor-pointer"
+                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Deletar
@@ -192,7 +192,7 @@ export function QuickActions({ work, onEdit, onDelete, onUpdate }: QuickActionsP
                   Tipo: {work.site_type}
                 </p>
               </div>
-              <p className="text-red-600 dark:text-red-400 font-medium mt-3">
+              <p className="text-red-600 font-medium mt-3">
                 Esta ação não pode ser desfeita!
               </p>
             </AlertDialogDescription>

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 interface WorkTypeDistributionProps {
   works: Work[]
@@ -10,6 +11,7 @@ interface WorkTypeDistributionProps {
 const COLORS = ['hsl(var(--primary))', '#3eba83', '#5b93e5', '#dba03e', '#e05858', '#8670d6', '#d46c9e']
 
 export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
+  const { sensitive } = useHideValues()
   const data = React.useMemo(() => {
     const typeData = new Map<string, { count: number, value: number }>()
     
@@ -52,7 +54,7 @@ export function WorkTypeDistribution({ works }: WorkTypeDistributionProps) {
           <p className="font-semibold text-sm mb-1">{data.name}</p>
           <p className="text-xs font-semibold text-foreground">Quantidade: {data.count} projetos</p>
           <p className="text-xs text-muted-foreground">Percentual: {data.percentage}%</p>
-          <p className="text-xs text-muted-foreground mt-1">Receita: {formatCurrency(data.revenue)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Receita: {sensitive(formatCurrency(data.revenue))}</p>
         </div>
       )
     }

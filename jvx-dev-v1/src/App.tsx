@@ -1,8 +1,8 @@
 import { lazy, Suspense } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { ThemeProvider } from "@/components/ui/theme-provider"
 import { AuthProvider, useAuth } from "@/contexts/AuthContext"
 import { WorksProvider } from "@/contexts/WorksContext"
+import { HideValuesProvider } from "@/contexts/HideValuesContext"
 import { ErrorBoundary, ProtectedRoute, LoadingScreen } from "@/components/common"
 import { Header } from "@/components/Header"
 import { Toaster } from "sonner"
@@ -17,6 +17,8 @@ const Equipe = lazy(() => import("./pages/Equipe"))
 const Relatorios = lazy(() => import("./pages/Relatorios"))
 const Configuracoes = lazy(() => import("./pages/Configuracoes"))
 const Ferramentas = lazy(() => import("./pages/Ferramentas"))
+const GeradorLinkSenhas = lazy(() => import("./ferramentas/GeradorLinkSenhas"))
+const DownDetector = lazy(() => import("./ferramentas/DownDetector"))
 const GerenciarUsuarios = lazy(() => import("./pages/GerenciarUsuarios"))
 
 // Layout wrapper para páginas autenticadas
@@ -93,6 +95,18 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
+          <Route path="/ferramentas/gerador-link-senhas" element={
+            <ProtectedRoute>
+              <AuthenticatedLayout><GeradorLinkSenhas /></AuthenticatedLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/ferramentas/down-detector" element={
+            <ProtectedRoute>
+              <AuthenticatedLayout><DownDetector /></AuthenticatedLayout>
+            </ProtectedRoute>
+          } />
+          
           {/* Rota apenas para master */}
           <Route path="/usuarios" element={
             <ProtectedRoute requireMaster>
@@ -108,15 +122,15 @@ function AppContent() {
 
 export function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <BrowserRouter>
-        <AuthProvider>
-          <WorksProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <WorksProvider>
+          <HideValuesProvider>
             <AppContent />
-          </WorksProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+          </HideValuesProvider>
+        </WorksProvider>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 

@@ -3,7 +3,6 @@ import { PageHeader } from '@/components/common'
 import { useWorks } from '@/contexts/WorksContext'
 import { Card } from '@/components/ui/card'
 import { 
-  TrendingUp, 
   DollarSign, 
   Package, 
   Users, 
@@ -15,6 +14,7 @@ import {
   Activity
 } from 'lucide-react'
 import { parseValue, formatCurrency } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 import { 
   BarChart, 
   Bar, 
@@ -39,6 +39,7 @@ const MONTH_NAMES_SHORT = [
 
 function Analises() {
   const { works, loading } = useWorks()
+  const { sensitive } = useHideValues()
 
   // ============================================
   // MÉTRICAS PRINCIPAIS
@@ -295,9 +296,9 @@ function Analises() {
             <p className="text-xs"><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1.5" style={{ backgroundColor: '#3eba83' }} />Concluídos: <strong>{data.concluidos}</strong></p>
             <p className="text-xs"><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1.5" style={{ backgroundColor: '#8670d6' }} />Pagos: <strong>{data.pagos}</strong></p>
             <div className="border-t mt-2 pt-2">
-              <p className="text-xs font-semibold">Receita: {formatCurrency(data.receita)}</p>
-              <p className="text-xs text-emerald-600">Recebida: {formatCurrency(data.receitaPaga)}</p>
-              <p className="text-xs text-amber-600">Pendente: {formatCurrency(data.receitaPendente)}</p>
+              <p className="text-xs font-semibold">Receita: {sensitive(formatCurrency(data.receita))}</p>
+              <p className="text-xs text-emerald-600">Recebida: {sensitive(formatCurrency(data.receitaPaga))}</p>
+              <p className="text-xs text-amber-600">Pendente: {sensitive(formatCurrency(data.receitaPendente))}</p>
             </div>
           </div>
         </div>
@@ -313,9 +314,9 @@ function Analises() {
         <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 text-sm">
           <p className="font-semibold mb-2">{data.month}</p>
           <div className="space-y-1">
-            <p className="text-xs">Receita Total: <strong>{formatCurrency(data.receita)}</strong></p>
-            <p className="text-xs text-emerald-600">Recebida: <strong>{formatCurrency(data.recebida)}</strong></p>
-            <p className="text-xs text-amber-600">Pendente: <strong>{formatCurrency(data.pendente)}</strong></p>
+            <p className="text-xs">Receita Total: <strong>{sensitive(formatCurrency(data.receita))}</strong></p>
+            <p className="text-xs text-emerald-600">Recebida: <strong>{sensitive(formatCurrency(data.recebida))}</strong></p>
+            <p className="text-xs text-amber-600">Pendente: <strong>{sensitive(formatCurrency(data.pendente))}</strong></p>
           </div>
         </div>
       )
@@ -334,8 +335,8 @@ function Analises() {
             <p className="text-xs text-emerald-600">Concluídos: <strong>{data.concluidos}</strong> ({data.taxaConclusao.toFixed(0)}%)</p>
             <p className="text-xs text-blue-600">Pagos: <strong>{data.pagos}</strong></p>
             <div className="border-t mt-2 pt-2">
-              <p className="text-xs font-semibold">Receita: {formatCurrency(data.receita)}</p>
-              <p className="text-xs text-emerald-600">Pgto Realizado: {formatCurrency(data.receitaPaga)}</p>
+              <p className="text-xs font-semibold">Receita: {sensitive(formatCurrency(data.receita))}</p>
+              <p className="text-xs text-emerald-600">Pgto Realizado: {sensitive(formatCurrency(data.receitaPaga))}</p>
             </div>
           </div>
         </div>
@@ -354,7 +355,7 @@ function Analises() {
             <p className="text-xs">Quantidade: <strong>{data.value}</strong> ({data.percentage.toFixed(1)}%)</p>
             <p className="text-xs">Pagos: <strong>{data.pagos}</strong></p>
             <div className="border-t mt-2 pt-2">
-              <p className="text-xs font-semibold">Receita: {formatCurrency(data.receita)}</p>
+              <p className="text-xs font-semibold">Receita: {sensitive(formatCurrency(data.receita))}</p>
             </div>
           </div>
         </div>
@@ -412,12 +413,12 @@ function Analises() {
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
               <CheckCircle className="h-4 w-4" />
             </div>
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-0.5">Taxa de Conclusão</p>
-          <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{mainMetrics.completionRate.toFixed(1)}%</p>
+          <p className="text-xl font-bold tracking-tight text-emerald-600">{mainMetrics.completionRate.toFixed(1)}%</p>
           <p className="text-[11px] text-muted-foreground mt-1">{mainMetrics.completedProjects} de {mainMetrics.totalProjects} concluídos</p>
         </Card>
       </div>
@@ -431,29 +432,29 @@ function Analises() {
             </div>
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-0.5">Receita Total</p>
-          <p className="text-xl font-bold tracking-tight">{formatCurrency(mainMetrics.totalRevenue)}</p>
+          <p className="text-xl font-bold tracking-tight">{sensitive(formatCurrency(mainMetrics.totalRevenue))}</p>
           <p className="text-[11px] text-muted-foreground mt-1">Todos os projetos</p>
         </Card>
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
               <CheckCircle className="h-4 w-4" />
             </div>
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-0.5">Pagamentos Realizados</p>
-          <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{formatCurrency(mainMetrics.paidRevenue)}</p>
+          <p className="text-xl font-bold tracking-tight text-emerald-600">{sensitive(formatCurrency(mainMetrics.paidRevenue))}</p>
           <p className="text-[11px] text-muted-foreground mt-1">{mainMetrics.paidProjects} projetos pagos</p>
         </Card>
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
               <Clock className="h-4 w-4" />
             </div>
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-0.5">Receita Pendente</p>
-          <p className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{formatCurrency(mainMetrics.pendingRevenue)}</p>
+          <p className="text-xl font-bold tracking-tight text-amber-600">{sensitive(formatCurrency(mainMetrics.pendingRevenue))}</p>
           <p className="text-[11px] text-muted-foreground mt-1">{mainMetrics.unpaidProjects} projetos não pagos</p>
         </Card>
       </div>
@@ -499,7 +500,7 @@ function Analises() {
       {revenueMonthlyData.length > 0 && (
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
               <Activity className="h-4 w-4" />
             </div>
             <div>
@@ -644,7 +645,7 @@ function Analises() {
         {statusData.length > 0 && (
           <Card className="p-5 border-transparent bg-card">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
                 <Activity className="h-4 w-4" />
               </div>
               <div>
@@ -704,7 +705,7 @@ function Analises() {
         {typeData.length > 0 && (
           <Card className="p-5 border-transparent bg-card">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600">
                 <DollarSign className="h-4 w-4" />
               </div>
               <div>
@@ -730,7 +731,7 @@ function Analises() {
                   tickLine={{ stroke: 'hsl(var(--border))' }}
                   width={120} 
                 />
-                <Tooltip formatter={(value: number) => [formatCurrency(value), 'Receita']} contentStyle={{ fontSize: '12px' }} />
+                <Tooltip formatter={(value: number) => [sensitive(formatCurrency(value)), 'Receita']} contentStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="receita" name="Receita" radius={[0, 4, 4, 0]} maxBarSize={24}>
                   {typeData.map((_, index) => (
                     <Cell key={`revenue-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -748,27 +749,27 @@ function Analises() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Projetos Entregues</p>
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{mainMetrics.deliveredProjects}</p>
+            <p className="text-lg font-bold text-emerald-600">{mainMetrics.deliveredProjects}</p>
             <p className="text-[11px] text-muted-foreground">{mainMetrics.deliveryRate.toFixed(1)}% do total</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Projetos Concluídos</p>
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{mainMetrics.completedProjects}</p>
+            <p className="text-lg font-bold text-emerald-600">{mainMetrics.completedProjects}</p>
             <p className="text-[11px] text-muted-foreground">{mainMetrics.completionRate.toFixed(1)}% do total</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Em Andamento</p>
-            <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{mainMetrics.inProgressProjects}</p>
+            <p className="text-lg font-bold text-amber-600">{mainMetrics.inProgressProjects}</p>
             <p className="text-[11px] text-muted-foreground">{(100 - mainMetrics.completionRate).toFixed(1)}% do total</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Projetos Pagos</p>
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{mainMetrics.paidProjects}</p>
+            <p className="text-lg font-bold text-emerald-600">{mainMetrics.paidProjects}</p>
             <p className="text-[11px] text-muted-foreground">{mainMetrics.paymentRate.toFixed(1)}% do total</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Projetos Não Pagos</p>
-            <p className="text-lg font-bold text-red-600 dark:text-red-400">{mainMetrics.unpaidProjects}</p>
+            <p className="text-lg font-bold text-red-600">{mainMetrics.unpaidProjects}</p>
             <p className="text-[11px] text-muted-foreground">{(100 - mainMetrics.paymentRate).toFixed(1)}% do total</p>
           </div>
         </div>

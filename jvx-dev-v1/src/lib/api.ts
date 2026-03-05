@@ -286,5 +286,190 @@ export const api = {
       const error = await response.json()
       throw new Error(error.error || 'Erro ao limpar banco de dados')
     }
+  },
+
+  // Histórico de mensagens do gerador de senhas
+  async getHistoricoSenhas(): Promise<Array<{
+    id: string
+    mensagem: string
+    timestamp: number
+    fixada: boolean
+  }>> {
+    const response = await apiFetch('/ferramentas/historico-senhas')
+    if (!response.ok) throw new Error('Erro ao carregar histórico')
+    return response.json()
+  },
+
+  async salvarHistoricoSenhas(historico: Array<{
+    id: string
+    mensagem: string
+    timestamp: number
+    fixada: boolean
+  }>): Promise<void> {
+    const response = await apiFetch('/ferramentas/historico-senhas', {
+      method: 'POST',
+      body: JSON.stringify({ historico })
+    })
+    if (!response.ok) throw new Error('Erro ao salvar histórico')
+  },
+
+  // Gerar link seguro via OneTimeSecret
+  async gerarLinkSeguro(dados: {
+    linkAcesso: string
+    login: string
+    senha: string
+    mensagem?: string
+    tempoExpiracao: string
+  }): Promise<{
+    success: boolean
+    linkSeguro: string
+    secret_key: string
+    expiracao: string
+    metadata: {
+      created: string
+      ttl_seconds: number
+    }
+  }> {
+    const response = await apiFetch('/ferramentas/gerar-link-senha', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao gerar link seguro')
+    }
+    return response.json()
+  },
+
+  // Buscar histórico de links gerados (auditoria)
+  async getHistoricoLinksGerados(): Promise<Array<{
+    id: number
+    username?: string
+    linkAcesso: string
+    login: string
+    mensagem?: string
+    tempoExpiracao: string
+    secretKey: string
+    createdAt: string
+  }>> {
+    const response = await apiFetch('/ferramentas/historico-links-gerados')
+    if (!response.ok) throw new Error('Erro ao carregar histórico de links')
+    return response.json()
+  },
+
+  // ============================================
+  // DOWN DETECTOR
+  // ============================================
+
+  async getMonitoredSites(): Promise<Array<{
+    id: string
+    url: string
+    status: 'online' | 'offline' | 'pending' | 'ssl'
+    statusCode: number | null
+    ipAddress: string | null
+    lastChecked: number | null
+    addedAt: number
+  }>> {
+    const response = await apiFetch('/ferramentas/down-detector/sites')
+    if (!response.ok) throw new Error('Erro ao carregar sites monitorados')
+    return response.json()
+  },
+
+  async addMonitoredSite(url: string): Promise<{
+    id: string
+    url: string
+    status: 'online' | 'offline' | 'pending' | 'ssl'
+    statusCode: number | null
+    ipAddress: string | null
+    lastChecked: number | null
+    addedAt: number
+  }> {
+    const response = await apiFetch('/ferramentas/down-detector/sites', {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao adicionar site')
+    }
+    return response.json()
+  },
+
+  async importMonitoredSites(urls: string[]): Promise<{
+    success: boolean
+    imported: number
+    skipped: number
+    sites: Array<{
+      id: string
+      url: string
+      status: 'online' | 'offline' | 'pending' | 'ssl'
+      statusCode: number | null
+      ipAddress: string | null
+      lastChecked: number | null
+      addedAt: number
+    }>
+  }> {
+    const response = await apiFetch('/ferramentas/down-detector/sites/import', {
+      method: 'POST',
+      body: JSON.stringify({ urls })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao importar sites')
+    }
+    return response.json()
+  },
+
+  async removeMonitoredSite(id: string): Promise<void> {
+    const response = await apiFetch(`/ferramentas/down-detector/sites/${id}`, {
+      method: 'DELETE'
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao remover site')
+    }
+  },
+
+  async removeMonitoredSitesBulk(ids: string[]): Promise<void> {
+    const response = await apiFetch('/ferramentas/down-detector/sites/remove-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ ids })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao remover sites')
+    }
+  },
+
+  async checkAllSites(ids?: string[]): Promise<{
+    success: boolean
+    results: Array<{
+      id: string
+      url: string
+      status: 'online' | 'offline' | 'ssl'
+      statusCode: number | null
+      ipAddress: string | null
+      lastChecked: number
+    }>
+  }> {
+    const response = await apiFetch('/ferramentas/down-detector/check', {
+      method: 'POST',
+      body: JSON.stringify(ids && ids.length > 0 ? { ids } : {})
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao verificar sites')
+    }
+    return response.json()
+  },
+
+  async getSiteCheckHistory(limit: number = 30): Promise<Record<string, Array<{
+    status: 'online' | 'offline' | 'ssl'
+    statusCode: number | null
+    checkedAt: number
+  }>>> {
+    const response = await apiFetch(`/ferramentas/down-detector/history?limit=${limit}`)
+    if (!response.ok) throw new Error('Erro ao carregar histórico')
+    return response.json()
   }
 }

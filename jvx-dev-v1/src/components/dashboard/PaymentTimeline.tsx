@@ -59,9 +59,9 @@ export function PaymentTimeline({ works }: PaymentTimelineProps) {
       return (
         <div className="bg-card border rounded-lg shadow-lg p-3">
           <p className="font-semibold text-sm mb-2">{payload[0].payload.month}</p>
-          <p className="text-xs text-green-600 dark:text-green-400">Entregues: {payload[0].payload.entregues} projetos</p>
-          <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes: {payload[0].payload.pendentes} projetos</p>
-          <p className="text-xs text-blue-600 dark:text-blue-400">Pagos: {payload[0].payload.pagos} projetos</p>
+          <p className="text-xs text-green-600">Entregues: {payload[0].payload.entregues} projetos</p>
+          <p className="text-xs text-orange-600">Pendentes: {payload[0].payload.pendentes} projetos</p>
+          <p className="text-xs text-blue-600">Pagos: {payload[0].payload.pagos} projetos</p>
           <p className="text-xs font-semibold text-foreground mt-1">Total: {payload[0].payload.total} projetos</p>
         </div>
       )

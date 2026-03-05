@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useWorks } from "@/contexts/WorksContext"
+import { useHideValues } from "@/contexts/HideValuesContext"
 import { parseValue, formatCurrency } from "@/lib/utils"
-import { Eye, EyeOff, User, Briefcase, Clock, Info } from "lucide-react"
+import { User, Briefcase, Clock, Info } from "lucide-react"
 import { DeveloperInfoDialog } from "@/components/dialogs"
 import { cn } from "@/lib/utils"
 
@@ -19,6 +20,7 @@ interface DeveloperStats {
 
 function Equipe() {
   const { works } = useWorks()
+  const { sensitive } = useHideValues()
   const [selectedDeveloper, setSelectedDeveloper] = React.useState<string | null>(null)
 
   const developers = React.useMemo(() => {
@@ -52,36 +54,6 @@ function Equipe() {
     return Array.from(devMap.values()).sort((a, b) => b.totalValue - a.totalValue)
   }, [works])
 
-  // Inicializar com todos os valores ocultos
-  const [hiddenValues, setHiddenValues] = React.useState<Set<string>>(() => {
-    return new Set(developers.map((d) => d.name))
-  })
-
-  // Atualizar quando a lista de desenvolvedores mudar
-  React.useEffect(() => {
-    setHiddenValues(new Set(developers.map((d) => d.name)))
-  }, [developers])
-
-  const toggleValueVisibility = (devName: string) => {
-    setHiddenValues((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(devName)) {
-        newSet.delete(devName)
-      } else {
-        newSet.add(devName)
-      }
-      return newSet
-    })
-  }
-
-  const toggleAllValues = () => {
-    if (hiddenValues.size === 0) {
-      setHiddenValues(new Set(developers.map((d) => d.name)))
-    } else {
-      setHiddenValues(new Set())
-    }
-  }
-
   return (
     <div className="space-y-6 pb-6">
       {/* Header */}
@@ -90,24 +62,6 @@ function Equipe() {
           title="Equipe"
           description="Gerencie informações sobre os desenvolvedores e suas estatísticas."
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleAllValues}
-          className="w-full sm:w-auto"
-        >
-          {hiddenValues.size === 0 ? (
-            <>
-              <EyeOff className="h-4 w-4 mr-2" />
-              Ocultar Todos os Valores
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4 mr-2" />
-              Mostrar Todos os Valores
-            </>
-          )}
-        </Button>
       </div>
 
       {/* Stats Gerais */}
@@ -125,7 +79,7 @@ function Equipe() {
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
               <Briefcase className="h-4 w-4" />
             </div>
           </div>
@@ -136,7 +90,7 @@ function Equipe() {
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
               <Clock className="h-4 w-4" />
             </div>
           </div>
@@ -147,12 +101,12 @@ function Equipe() {
 
         <Card className="p-5 border-transparent bg-card">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
               <Briefcase className="h-4 w-4" />
             </div>
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-0.5">Valor Total</p>
-          <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{formatCurrency(developers.reduce((acc, dev) => acc + dev.totalValue, 0))}</p>
+          <p className="text-xl font-bold tracking-tight text-emerald-600">{sensitive(formatCurrency(developers.reduce((acc, dev) => acc + dev.totalValue, 0)))}</p>
           <p className="text-[11px] text-muted-foreground mt-1">Arrecadado pela equipe</p>
         </Card>
       </div>
@@ -160,8 +114,6 @@ function Equipe() {
       {/* Lista de Desenvolvedores */}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {developers.map((dev) => {
-          const isHidden = hiddenValues.has(dev.name)
-
           return (
             <Card
               key={dev.name}
@@ -203,41 +155,17 @@ function Equipe() {
                 {/* Valor Total */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Valor total</span>
-                  <div className="flex items-center gap-1.5">
-                    {isHidden ? (
-                      <span className="text-xs font-medium">••••••</span>
-                    ) : (
-                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(dev.totalValue)}
-                      </span>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={() => toggleValueVisibility(dev.name)}
-                    >
-                      {isHidden ? (
-                        <Eye className="h-3 w-3" />
-                      ) : (
-                        <EyeOff className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
+                  <span className="text-xs font-semibold text-emerald-600">
+                    {sensitive(formatCurrency(dev.totalValue))}
+                  </span>
                 </div>
 
                 {/* Valor Pendente */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Valor a receber</span>
-                  <div className="flex items-center gap-1.5">
-                    {isHidden ? (
-                      <span className="text-xs font-medium">••••••</span>
-                    ) : (
-                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                        {formatCurrency(dev.pendingValue)}
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-xs font-semibold text-amber-600">
+                    {sensitive(formatCurrency(dev.pendingValue))}
+                  </span>
                 </div>
 
                 {/* Barra de Progresso */}
@@ -247,10 +175,10 @@ function Equipe() {
                     <span className={cn(
                       "font-semibold",
                       dev.totalProjects > 0 && ((dev.totalProjects - dev.activeProjects) / dev.totalProjects) * 100 >= 80
-                        ? "text-green-600 dark:text-green-400"
+                        ? "text-green-600"
                         : dev.totalProjects > 0 && ((dev.totalProjects - dev.activeProjects) / dev.totalProjects) * 100 >= 50
-                        ? "text-yellow-600 dark:text-yellow-400"
-                        : "text-red-600 dark:text-red-400"
+                        ? "text-yellow-600"
+                        : "text-red-600"
                     )}>
                       {dev.totalProjects > 0
                         ? Math.round(((dev.totalProjects - dev.activeProjects) / dev.totalProjects) * 100)

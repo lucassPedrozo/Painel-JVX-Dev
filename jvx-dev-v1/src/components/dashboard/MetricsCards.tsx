@@ -2,12 +2,14 @@ import * as React from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Package } from 'lucide-react'
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 interface MetricsCardsProps {
   works: Work[]
 }
 
 export function MetricsCards({ works }: MetricsCardsProps) {
+  const { sensitive } = useHideValues()
   const metrics = React.useMemo(() => {
     const totalValue = works.reduce((acc, w) => acc + parseValue(w.value), 0)
     const paidValue = works
@@ -65,42 +67,42 @@ export function MetricsCards({ works }: MetricsCardsProps) {
       value: works.length.toString(),
       icon: Package,
       description: 'Projetos cadastrados',
-      color: 'text-blue-600 bg-blue-500/10 dark:text-blue-400'
+      color: 'text-blue-600 bg-blue-500/10'
     },
     {
       title: 'Projetos Entregues',
       value: metrics.deliveredCount.toString(),
       icon: TrendingUp,
       description: `${((metrics.deliveredCount / works.length) * 100).toFixed(1)}% do total`,
-      color: 'text-green-600 bg-green-500/10 dark:text-green-400'
+      color: 'text-green-600 bg-green-500/10'
     },
     {
       title: 'Projetos Pendentes',
       value: metrics.pendingCount.toString(),
       icon: TrendingDown,
       description: 'Aguardando entrega',
-      color: 'text-orange-600 bg-orange-500/10 dark:text-orange-400'
+      color: 'text-orange-600 bg-orange-500/10'
     },
     {
       title: 'Pagamentos Recebidos',
       value: metrics.paidCount.toString(),
       icon: DollarSign,
       description: `${((metrics.paidCount / works.length) * 100).toFixed(1)}% do total`,
-      color: 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400'
+      color: 'text-emerald-600 bg-emerald-500/10'
     },
     {
       title: 'Desenvolvedores Ativos',
       value: metrics.developers.toString(),
       icon: Users,
       description: 'Equipe trabalhando',
-      color: 'text-cyan-600 bg-cyan-500/10 dark:text-cyan-400'
+      color: 'text-cyan-600 bg-cyan-500/10'
     },
     {
       title: 'Receita Total',
-      value: formatCurrency(metrics.totalValue),
+      value: sensitive(formatCurrency(metrics.totalValue)),
       icon: Calendar,
-      description: `Pgto recebido: ${formatCurrency(metrics.paidValue)}`,
-      color: 'text-purple-600 bg-purple-500/10 dark:text-purple-400'
+      description: `Pgto recebido: ${sensitive(formatCurrency(metrics.paidValue))}`,
+      color: 'text-purple-600 bg-purple-500/10'
     }
   ]
 

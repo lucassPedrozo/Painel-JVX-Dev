@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -5,7 +6,8 @@ import {
   KeyRound,
   Wrench,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Activity
 } from 'lucide-react'
 
 interface Tool {
@@ -23,11 +25,28 @@ const tools: Tool[] = [
     name: 'Gerador de Link para Senhas',
     description: 'Gere links seguros para compartilhamento de senhas com expiração automática.',
     icon: KeyRound,
-    status: 'coming-soon',
+    status: 'available',
+    href: '/ferramentas/gerador-link-senhas',
+  },
+  {
+    id: 'down-detector',
+    name: 'Down Detector',
+    description: 'Monitore a disponibilidade dos seus sites e detecte instabilidades em tempo real.',
+    icon: Activity,
+    status: 'available',
+    href: '/ferramentas/down-detector',
   },
 ]
 
 function Ferramentas() {
+  const navigate = useNavigate()
+
+  const handleToolClick = (tool: Tool) => {
+    if (tool.status === 'available' && tool.href) {
+      navigate(tool.href)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-6">
       <PageHeader
@@ -44,6 +63,7 @@ function Ferramentas() {
           return (
             <Card
               key={tool.id}
+              onClick={() => handleToolClick(tool)}
               className={`border-transparent bg-card overflow-hidden transition-all duration-200 group ${
                 isComingSoon
                   ? 'opacity-75'

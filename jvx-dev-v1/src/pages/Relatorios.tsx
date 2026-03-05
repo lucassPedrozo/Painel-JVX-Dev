@@ -1,17 +1,27 @@
 import * as React from 'react'
 import { Download, FileText, Filter, TrendingUp, DollarSign, Package } from 'lucide-react'
+import { IconFileTypePdf } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/common'
 import { useWorks } from '@/contexts/WorksContext'
+import { useHideValues } from '@/contexts/HideValuesContext'
 import { SITE_TYPES, PAYMENT_STATUS } from '@/lib/constants'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
+import {
+  generateFinancialPDF,
+  generateDeveloperPDF,
+  generateTypePDF,
+  generateMonthlyPDF,
+  generateCompletePDF
+} from '@/lib/pdf-export'
 import { toast } from 'sonner'
 
 function Relatorios() {
   const { works } = useWorks()
+  const { sensitive } = useHideValues()
   const [startDate, setStartDate] = React.useState('')
   const [endDate, setEndDate] = React.useState('')
   const [filterType, setFilterType] = React.useState('all')
@@ -428,7 +438,7 @@ function Relatorios() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Receita Total</p>
-                <p className="text-xl font-bold tracking-tight">{formatCurrency(financialMetrics.totalRevenue)}</p>
+                <p className="text-xl font-bold tracking-tight">{sensitive(formatCurrency(financialMetrics.totalRevenue))}</p>
                 <p className="text-[11px] text-muted-foreground">{financialMetrics.totalProjects} projetos</p>
               </div>
             </div>
@@ -441,7 +451,7 @@ function Relatorios() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Pagamentos Realizados</p>
-                <p className="text-xl font-bold tracking-tight text-emerald-600">{formatCurrency(financialMetrics.paidRevenue)}</p>
+                <p className="text-xl font-bold tracking-tight text-emerald-600">{sensitive(formatCurrency(financialMetrics.paidRevenue))}</p>
                 <p className="text-[11px] text-muted-foreground">{financialMetrics.paidProjects} pagos ({financialMetrics.paymentRate.toFixed(1)}%)</p>
               </div>
             </div>
@@ -454,17 +464,21 @@ function Relatorios() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Receita Pendente</p>
-                <p className="text-xl font-bold tracking-tight text-amber-600">{formatCurrency(financialMetrics.pendingRevenue)}</p>
+                <p className="text-xl font-bold tracking-tight text-amber-600">{sensitive(formatCurrency(financialMetrics.pendingRevenue))}</p>
                 <p className="text-[11px] text-muted-foreground">{financialMetrics.unpaidProjects} não pagos</p>
               </div>
             </div>
           </Card>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={exportFinancialReport} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
-            Exportar Resumo Financeiro
+            Exportar CSV
+          </Button>
+          <Button onClick={() => { generateFinancialPDF(financialMetrics); toast.success('PDF financeiro gerado!') }} variant="outline" className="w-full sm:w-auto">
+            <IconFileTypePdf className="h-4 w-4 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>
@@ -496,9 +510,9 @@ function Relatorios() {
                     <td className="px-4 py-3 font-medium">{dev.developer}</td>
                     <td className="text-right px-4 py-3">{dev.total}</td>
                     <td className="text-right px-4 py-3 text-emerald-600">{dev.paid}</td>
-                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(dev.totalRevenue)}</td>
-                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(dev.paidRevenue)}</td>
-                    <td className="text-right px-4 py-3 text-amber-600">{formatCurrency(dev.pendingRevenue)}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{sensitive(formatCurrency(dev.totalRevenue))}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{sensitive(formatCurrency(dev.paidRevenue))}</td>
+                    <td className="text-right px-4 py-3 text-amber-600">{sensitive(formatCurrency(dev.pendingRevenue))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -506,10 +520,14 @@ function Relatorios() {
           </div>
         </Card>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={exportDeveloperReport} variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
-            Exportar Análise por Desenvolvedor
+            Exportar CSV
+          </Button>
+          <Button onClick={() => { generateDeveloperPDF(developerStats); toast.success('PDF por desenvolvedor gerado!') }} variant="outline" className="w-full sm:w-auto">
+            <IconFileTypePdf className="h-4 w-4 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>
@@ -540,8 +558,8 @@ function Relatorios() {
                     <td className="px-4 py-3 font-medium">{type.type}</td>
                     <td className="text-right px-4 py-3">{type.count}</td>
                     <td className="text-right px-4 py-3">{type.percentage.toFixed(1)}%</td>
-                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(type.revenue)}</td>
-                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(type.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{sensitive(formatCurrency(type.revenue))}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{sensitive(formatCurrency(type.paidRevenue))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -549,10 +567,14 @@ function Relatorios() {
           </div>
         </Card>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={exportTypeReport} variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
-            Exportar Análise por Tipo
+            Exportar CSV
+          </Button>
+          <Button onClick={() => { generateTypePDF(typeStats); toast.success('PDF por tipo gerado!') }} variant="outline" className="w-full sm:w-auto">
+            <IconFileTypePdf className="h-4 w-4 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>
@@ -585,8 +607,8 @@ function Relatorios() {
                     <td className="text-right px-4 py-3">{month.total}</td>
                     <td className="text-right px-4 py-3">{month.completed}</td>
                     <td className="text-right px-4 py-3 text-emerald-600">{month.paid}</td>
-                    <td className="text-right px-4 py-3 font-semibold">{formatCurrency(month.revenue)}</td>
-                    <td className="text-right px-4 py-3 text-emerald-600">{formatCurrency(month.paidRevenue)}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{sensitive(formatCurrency(month.revenue))}</td>
+                    <td className="text-right px-4 py-3 text-emerald-600">{sensitive(formatCurrency(month.paidRevenue))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -594,10 +616,14 @@ function Relatorios() {
           </div>
         </Card>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={exportMonthlyReport} variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
-            Exportar Análise Mensal
+            Exportar CSV
+          </Button>
+          <Button onClick={() => { generateMonthlyPDF(monthlyStats); toast.success('PDF mensal gerado!') }} variant="outline" className="w-full sm:w-auto">
+            <IconFileTypePdf className="h-4 w-4 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>
@@ -614,10 +640,16 @@ function Relatorios() {
           <p className="text-xs text-muted-foreground mb-3">
             Exporte todos os {filteredWorks.length} projetos selecionados com informações detalhadas.
           </p>
-          <Button onClick={exportCompleteReport} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar Relatório Completo
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={exportCompleteReport} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+            <Button onClick={() => { generateCompletePDF(filteredWorks); toast.success('PDF completo gerado!') }} variant="outline">
+              <IconFileTypePdf className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </Button>
+          </div>
         </Card>
       </div>
 

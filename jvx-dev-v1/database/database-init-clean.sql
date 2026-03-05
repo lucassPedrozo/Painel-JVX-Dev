@@ -102,6 +102,39 @@ CREATE INDEX idx_developer_status ON works(developer_status);
 CREATE INDEX idx_completed_by ON works(completed_by);
 
 -- ============================================
+-- Tabela de Histórico de Senhas (Ferramentas)
+-- ============================================
+CREATE TABLE IF NOT EXISTS password_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  mensagem TEXT NOT NULL,
+  timestamp BIGINT NOT NULL,
+  fixada BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_timestamp (user_id, timestamp DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Tabela de Sites Monitorados (Down Detector)
+-- ============================================
+CREATE TABLE IF NOT EXISTS monitored_sites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  status ENUM('online', 'offline', 'pending', 'ssl') DEFAULT 'pending',
+  status_code INT NULL,
+  ip_address VARCHAR(45) NULL,
+  last_checked BIGINT NULL,
+  added_at BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_sites (user_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Verificação
 -- ============================================
 SELECT 'Banco de dados criado com sucesso!' AS status;

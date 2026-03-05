@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { type Work } from '@/lib/api'
 import { parseValue, formatCurrency, formatDate } from '@/lib/utils'
+import { useHideValues } from '@/contexts/HideValuesContext'
 import { QuickActions } from './QuickActions'
 import { UnifiedStatusBadge } from './UnifiedStatusBadge'
 
@@ -25,6 +26,7 @@ interface WorksTableProps {
 }
 
 export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdit, onDelete }: WorksTableProps) {
+  const { sensitive } = useHideValues()
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(25)
 
@@ -170,7 +172,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                               href={work.template} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                              className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors cursor-pointer"
                               title={work.template}
                             >
                               Ver Template
@@ -181,7 +183,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                         </td>
                         <td className="px-3 py-3 min-w-[110px] w-[110px]">
                           <span className="text-sm font-bold text-foreground whitespace-nowrap">
-                            {formatCurrency(parseValue(work.value))}
+                            {sensitive(formatCurrency(parseValue(work.value)))}
                           </span>
                         </td>
                         <td className="px-3 py-3 min-w-[140px] w-[140px]">
@@ -284,7 +286,7 @@ export function WorksTable({ works, loading, sortField, sortOrder, onSort, onEdi
                   {works.length} {works.length === 1 ? 'projeto' : 'projetos'}
                 </span>
                 <span className="text-muted-foreground">
-                  Receita: <span className="font-bold text-foreground">{formatCurrency(works.reduce((acc, work) => acc + parseValue(work.value), 0))}</span>
+                  Receita: <span className="font-bold text-foreground">{sensitive(formatCurrency(works.reduce((acc, work) => acc + parseValue(work.value), 0)))}</span>
                 </span>
                 <span className="text-emerald-600">
                   Pagos: {works.filter(w => w.payment_status === "Pago").length}
