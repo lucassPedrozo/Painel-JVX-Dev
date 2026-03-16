@@ -28,6 +28,51 @@ const keepAliveHttpsInsecureAgent = new https.Agent({ keepAlive: true, maxSocket
 const DNS_CACHE_TTL_MS = 120_000; // 2 minutos
 const dnsCacheMap = new Map();
 
+// Cache de Name Servers com TTL mais longo (NS muda raramente)
+const NS_CACHE_TTL_MS = 600_000; // 10 minutos
+const nsCacheMap = new Map();
+
+// Resolver Name Servers via Google DNS-over-HTTPS
+async function resolveNameServers(domain) {
+  const entry = nsCacheMap.get(domain);
+  if (entry && Date.now() - entry.ts < NS_CACHE_TTL_MS) return entry.ns;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=NS`, {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' }
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('DNS API error');
+    const data = await res.json();
+    const ns = (data.Answer || [])
+      .filter(r => r.type === 2) // NS record type
+      .map(r => r.data.replace(/\.$/, '').toLowerCase())
+      .sort();
+    nsCacheMap.set(domain, { ns, ts: Date.now() });
+    return ns;
+  } catch {
+    nsCacheMap.set(domain, { ns: [], ts: Date.now() });
+    return [];
+  }
+}
+
+// Extrair domínio registrável a partir de um hostname
+// Trata TLDs de dois níveis: .com.br, .co.uk, .org.br, .net.br, etc.
+const KNOWN_SLDS = new Set(['com','co','org','net','gov','edu','ac','mil','adm','adv','agr','am','arq','art','ato','bio','blog','bmd','cim','cng','cnt','ecn','eco','emp','eng','esp','etc','eti','far','flog','fm','fnd','fot','fst','g12','ggf','imb','ind','inf','jor','jus','leg','lel','mat','med','mus','not','ntr','odo','ppg','pro','psc','psi','qsl','radio','rec','slg','srv','taxi','teo','tmp','trd','tur','tv','vet','vlog','wiki','zlg']);
+
+function getRootDomain(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length <= 2) return hostname;
+  // Se o penúltimo segmento é um SLD conhecido (ex: com em com.br), pegar 3 partes
+  if (parts.length >= 3 && KNOWN_SLDS.has(parts[parts.length - 2])) {
+    return parts.slice(-3).join('.');
+  }
+  return parts.slice(-2).join('.');
+}
+
 async function cachedDnsResolve(hostname) {
   const entry = dnsCacheMap.get(hostname);
   if (entry && Date.now() - entry.ts < DNS_CACHE_TTL_MS) return entry.ip;
@@ -1201,6 +1246,13 @@ async function ensureDownDetectorTable() {
     // Ignora se já existe
   }
 
+  // Adicionar coluna nameservers se não existir
+  try {
+    await pool.execute(`ALTER TABLE monitored_sites ADD COLUMN nameservers TEXT NULL AFTER ip_address`);
+  } catch {
+    // Ignora se já existe
+  }
+
   // Tabela de histórico de verificações
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS site_check_history (
@@ -1220,8 +1272,30 @@ app.get("/ferramentas/down-detector/sites", authenticateToken, asyncHandler(asyn
   await ensureDownDetectorTable();
 
   const [rows] = await pool.execute(
-    "SELECT id, url, status, status_code, ip_address, last_checked, added_at FROM monitored_sites ORDER BY added_at DESC"
+    "SELECT id, url, status, status_code, ip_address, nameservers, last_checked, added_at FROM monitored_sites ORDER BY added_at DESC"
   );
+
+  // Resolver NS em background para sites que ainda não têm
+  const sitesWithoutNs = rows.filter(r => !r.nameservers);
+  if (sitesWithoutNs.length > 0) {
+    (async () => {
+      try {
+        for (const site of sitesWithoutNs) {
+          try {
+            const hostname = new URL(site.url).hostname;
+            const rootDomain = getRootDomain(hostname);
+            const ns = await resolveNameServers(rootDomain);
+            if (ns.length > 0) {
+              await pool.execute(
+                "UPDATE monitored_sites SET nameservers = ? WHERE id = ?",
+                [JSON.stringify(ns), site.id]
+              );
+            }
+          } catch { /* ignora erros individuais */ }
+        }
+      } catch { /* ignora erros gerais */ }
+    })();
+  }
 
   res.json(rows.map(row => ({
     id: String(row.id),
@@ -1229,6 +1303,7 @@ app.get("/ferramentas/down-detector/sites", authenticateToken, asyncHandler(asyn
     status: row.status,
     statusCode: row.status_code,
     ipAddress: row.ip_address || null,
+    nameServers: row.nameservers ? JSON.parse(row.nameservers) : [],
     lastChecked: row.last_checked ? Number(row.last_checked) : null,
     addedAt: Number(row.added_at)
   })));
@@ -1266,6 +1341,7 @@ app.post("/ferramentas/down-detector/sites", authenticateToken, asyncHandler(asy
     status: 'pending',
     statusCode: null,
     ipAddress: null,
+    nameServers: [],
     lastChecked: null,
     addedAt
   });
@@ -1317,7 +1393,7 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
 
   // Buscar lista atualizada
   const [rows] = await pool.execute(
-    "SELECT id, url, status, status_code, ip_address, last_checked, added_at FROM monitored_sites ORDER BY added_at DESC"
+    "SELECT id, url, status, status_code, ip_address, nameservers, last_checked, added_at FROM monitored_sites ORDER BY added_at DESC"
   );
 
   res.json({
@@ -1330,6 +1406,7 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
       status: row.status,
       statusCode: row.status_code,
       ipAddress: row.ip_address || null,
+      nameServers: row.nameservers ? JSON.parse(row.nameservers) : [],
       lastChecked: row.last_checked ? Number(row.last_checked) : null,
       addedAt: Number(row.added_at)
     }))
@@ -1494,18 +1571,22 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
       }
     }
 
-    return { id: String(site.id), url: site.url, status, statusCode, ipAddress, lastChecked: now };
+    return { id: String(site.id), url: site.url, status, statusCode, ipAddress, nameServers: site.resolvedNs || [], lastChecked: now };
   }
 
-  // --- FASE 1: Resolver DNS de todos os sites (cache persistente, muito rápido) ---
+  // --- FASE 1: Resolver DNS e NS de todos os sites (cache persistente, muito rápido) ---
   const resolvedSites = await Promise.all(
     rows.map(async (site) => {
       try {
         const hostname = new URL(site.url).hostname;
-        const ip = await cachedDnsResolve(hostname);
-        return { ...site, resolvedIp: ip || 'unknown' };
+        const rootDomain = getRootDomain(hostname);
+        const [ip, ns] = await Promise.all([
+          cachedDnsResolve(hostname),
+          resolveNameServers(rootDomain)
+        ]);
+        return { ...site, resolvedIp: ip || 'unknown', resolvedNs: ns };
       } catch {
-        return { ...site, resolvedIp: 'unknown' };
+        return { ...site, resolvedIp: 'unknown', resolvedNs: [] };
       }
     })
   );
@@ -1559,6 +1640,7 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
     const caseStatus = chunk.map(() => `WHEN ? THEN ?`).join(' ');
     const caseCode = chunk.map(r => `WHEN ? THEN ${r.statusCode !== null ? '?' : 'NULL'}`).join(' ');
     const caseIp = chunk.map(r => `WHEN ? THEN ${r.ipAddress ? '?' : 'NULL'}`).join(' ');
+    const caseNs = chunk.map(r => `WHEN ? THEN ${r.nameServers && r.nameServers.length > 0 ? '?' : 'NULL'}`).join(' ');
     const idPlaceholders = chunk.map(() => '?').join(',');
 
     const params = [];
@@ -1568,6 +1650,8 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
     for (const r of chunk) { params.push(r.id); if (r.statusCode !== null) params.push(r.statusCode); }
     // CASE ip_address
     for (const r of chunk) { params.push(r.id); if (r.ipAddress) params.push(r.ipAddress); }
+    // CASE nameservers
+    for (const r of chunk) { params.push(r.id); if (r.nameServers && r.nameServers.length > 0) params.push(JSON.stringify(r.nameServers)); }
     // last_checked
     params.push(now);
     // WHERE IN
@@ -1578,6 +1662,7 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
         status = CASE id ${caseStatus} END,
         status_code = CASE id ${caseCode} END,
         ip_address = CASE id ${caseIp} END,
+        nameservers = CASE id ${caseNs} END,
         last_checked = ?
       WHERE id IN (${idPlaceholders})
     `, params);

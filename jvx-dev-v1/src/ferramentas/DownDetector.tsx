@@ -52,6 +52,8 @@ import {
   SortAsc,
   SortDesc,
   Trash,
+  Server,
+  Wifi,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import {
@@ -79,6 +81,7 @@ interface MonitoredSite {
   status: SiteStatus
   statusCode: number | null
   ipAddress: string | null
+  nameServers: string[]
   lastChecked: number | null
   addedAt: number
 }
@@ -100,7 +103,7 @@ type CompositeFilter =
   | 'never-checked'     // Nunca verificados
   | 'low-uptime'        // Uptime < 90%
 
-type SortOption = 'default' | 'url-asc' | 'url-desc' | 'status' | 'last-checked' | 'uptime-asc' | 'uptime-desc'
+type SortOption = 'default' | 'url-asc' | 'url-desc' | 'status' | 'last-checked' | 'uptime-asc' | 'uptime-desc' | 'ns-asc' | 'ns-desc'
 
 interface FilterPreset {
   id: CompositeFilter
@@ -302,6 +305,8 @@ function DownDetector() {
   const [lastGlobalCheck, setLastGlobalCheck] = React.useState<number | null>(null)
   const [checkHistory, setCheckHistory] = React.useState<CheckHistoryMap>({})
   const [showFilterPanel, setShowFilterPanel] = React.useState(false)
+  const [nsFilter, setNsFilter] = React.useState<string>('all')
+  const [ipFilter, setIpFilter] = React.useState<string>('all')
   const ITEMS_PER_PAGE = 50
   const checkTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -495,7 +500,7 @@ function DownDetector() {
         prev.map(site => {
           const updated = result.results.find((r: { id: string }) => r.id === site.id)
           if (updated) {
-            return { ...site, status: updated.status, statusCode: updated.statusCode, ipAddress: updated.ipAddress, lastChecked: updated.lastChecked }
+            return { ...site, status: updated.status, statusCode: updated.statusCode, ipAddress: updated.ipAddress, nameServers: updated.nameServers || site.nameServers, lastChecked: updated.lastChecked }
           }
           return site
         })
@@ -585,6 +590,7 @@ function DownDetector() {
               status: updated.status,
               statusCode: updated.statusCode,
               ipAddress: updated.ipAddress,
+              nameServers: updated.nameServers || site.nameServers,
               lastChecked: updated.lastChecked,
             }
           }
@@ -712,7 +718,7 @@ function DownDetector() {
       return
     }
 
-    const header = 'URL,Status,Código HTTP,IP,Última Verificação'
+    const header = 'URL,Status,Código HTTP,IP,Name Servers,Última Verificação'
     const rows = selected.map(s => {
       const lastCheck = s.lastChecked
         ? new Date(s.lastChecked).toLocaleString('pt-BR')
@@ -726,6 +732,7 @@ function DownDetector() {
         statusLabel,
         s.statusCode ?? '',
         s.ipAddress ?? '',
+        `"${(s.nameServers || []).join('; ')}"`,
         `"${lastCheck}"`,
       ].join(',')
     })
@@ -801,12 +808,25 @@ function DownDetector() {
       filtered = filtered.filter(s => s.status === filter)
     }
 
+    // Filtro por Name Server
+    if (nsFilter !== 'all') {
+      filtered = filtered.filter(s =>
+        (s.nameServers || []).some(ns => ns.includes(nsFilter))
+      )
+    }
+
+    // Filtro por IP
+    if (ipFilter !== 'all') {
+      filtered = filtered.filter(s => s.ipAddress === ipFilter)
+    }
+
     // Filtro por busca textual
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(s =>
         s.url.toLowerCase().includes(term) ||
-        (s.ipAddress && s.ipAddress.includes(term))
+        (s.ipAddress && s.ipAddress.includes(term)) ||
+        (s.nameServers || []).some(ns => ns.toLowerCase().includes(term))
       )
     }
 
@@ -836,6 +856,16 @@ function DownDetector() {
             const uptimeA = getUptimePercentage(checkHistory[a.id] || []) ?? 0
             const uptimeB = getUptimePercentage(checkHistory[b.id] || []) ?? 0
             return uptimeB - uptimeA
+          }
+          case 'ns-asc': {
+            const nsA = (a.nameServers || [])[0] || ''
+            const nsB = (b.nameServers || [])[0] || ''
+            return nsA.localeCompare(nsB)
+          }
+          case 'ns-desc': {
+            const nsA = (a.nameServers || [])[0] || ''
+            const nsB = (b.nameServers || [])[0] || ''
+            return nsB.localeCompare(nsA)
           }
           default:
             return 0
@@ -867,6 +897,34 @@ function DownDetector() {
     }
   }, [totalSites, onlineCount, offlineCount, sslCount, pendingCount, wentDownCount, cameUpCount, neverCheckedCount, lowUptimeCount, sites])
 
+  // NS providers e IPs únicos para os dropdowns de filtros
+  const nsProviders = React.useMemo(() => {
+    const providerMap = new Map<string, number>()
+    for (const site of sites) {
+      for (const ns of (site.nameServers || [])) {
+        // Extrair provider do NS (ex: ns1.cloudflare.com -> cloudflare.com)
+        const parts = ns.split('.')
+        const provider = parts.length >= 2 ? parts.slice(-2).join('.') : ns
+        providerMap.set(provider, (providerMap.get(provider) || 0) + 1)
+      }
+    }
+    return Array.from(providerMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([provider, count]) => ({ provider, count }))
+  }, [sites])
+
+  const uniqueIps = React.useMemo(() => {
+    const ipMap = new Map<string, number>()
+    for (const site of sites) {
+      if (site.ipAddress) {
+        ipMap.set(site.ipAddress, (ipMap.get(site.ipAddress) || 0) + 1)
+      }
+    }
+    return Array.from(ipMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([ip, count]) => ({ ip, count }))
+  }, [sites])
+
   // --- Paginação ---
   const totalPages = Math.max(1, Math.ceil(filteredSites.length / ITEMS_PER_PAGE))
   const safePage = Math.min(currentPage, totalPages)
@@ -878,7 +936,7 @@ function DownDetector() {
   // Reset página ao mudar filtros
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [filter, compositeFilter, searchTerm, sortOption])
+  }, [filter, compositeFilter, searchTerm, sortOption, nsFilter, ipFilter])
 
   // Carregar última verificação global dos sites existentes
   React.useEffect(() => {
@@ -1262,7 +1320,7 @@ function DownDetector() {
                 <Input
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por URL ou IP..."
+                  placeholder="Buscar por URL, IP ou NS..."
                   className="pl-8 h-9 text-sm"
                 />
               </div>
@@ -1274,8 +1332,10 @@ function DownDetector() {
               >
                 <Filter className="h-4 w-4" />
                 Filtros
-                {compositeFilter !== 'all' && (
-                  <Badge className="ml-1 h-4 px-1.5 text-[9px] bg-primary/20 text-primary border-0">1</Badge>
+                {(compositeFilter !== 'all' || nsFilter !== 'all' || ipFilter !== 'all') && (
+                  <Badge className="ml-1 h-4 px-1.5 text-[9px] bg-primary/20 text-primary border-0">
+                    {[compositeFilter !== 'all', nsFilter !== 'all', ipFilter !== 'all'].filter(Boolean).length}
+                  </Badge>
                 )}
               </Button>
               <Select value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
@@ -1293,6 +1353,8 @@ function DownDetector() {
                   <SelectItem value="last-checked">Última verificação</SelectItem>
                   <SelectItem value="uptime-asc">Uptime (menor →  maior)</SelectItem>
                   <SelectItem value="uptime-desc">Uptime (maior → menor)</SelectItem>
+                  <SelectItem value="ns-asc">NS (A → Z)</SelectItem>
+                  <SelectItem value="ns-desc">NS (Z → A)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1307,7 +1369,7 @@ function DownDetector() {
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
-                      onClick={() => { setCompositeFilter('all'); setFilter('all') }}
+                      onClick={() => { setCompositeFilter('all'); setFilter('all'); setNsFilter('all'); setIpFilter('all') }}
                     >
                       <X className="h-3 w-3" />
                       Limpar filtro
@@ -1361,25 +1423,102 @@ function DownDetector() {
                     — mostrando {filteredSites.length} de {totalSites} sites
                   </div>
                 )}
+
+                {/* Filtros por NS e IP */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {nsProviders.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Server className="h-3 w-3 text-muted-foreground" />
+                      <Select value={nsFilter} onValueChange={setNsFilter}>
+                        <SelectTrigger className="h-7 text-[11px] w-[200px]">
+                          <SelectValue placeholder="Name Server..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os NS</SelectItem>
+                          {nsProviders.map(({ provider, count }) => (
+                            <SelectItem key={provider} value={provider}>
+                              {provider} ({count})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {uniqueIps.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Wifi className="h-3 w-3 text-muted-foreground" />
+                      <Select value={ipFilter} onValueChange={setIpFilter}>
+                        <SelectTrigger className="h-7 text-[11px] w-[200px]">
+                          <SelectValue placeholder="Endereço IP..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os IPs</SelectItem>
+                          {uniqueIps.map(({ ip, count }) => (
+                            <SelectItem key={ip} value={ip}>
+                              {ip} ({count})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {(nsFilter !== 'all' || ipFilter !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => { setNsFilter('all'); setIpFilter('all') }}
+                    >
+                      <X className="h-3 w-3" />
+                      Limpar NS/IP
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Chip do filtro ativo (quando painel fechado) */}
-            {!showFilterPanel && compositeFilter !== 'all' && (
-              <div className="flex items-center gap-2">
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium ${
-                  FILTER_PRESETS.find(p => p.id === compositeFilter)?.color || ''
-                }`}>
-                  <Filter className="h-3 w-3" />
-                  {FILTER_PRESETS.find(p => p.id === compositeFilter)?.label}
-                  <span className="font-bold tabular-nums">({filteredSites.length})</span>
-                  <button
-                    onClick={() => { setCompositeFilter('all'); setFilter('all') }}
-                    className="ml-1 hover:opacity-70"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
+            {!showFilterPanel && (compositeFilter !== 'all' || nsFilter !== 'all' || ipFilter !== 'all') && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {compositeFilter !== 'all' && (
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium ${
+                    FILTER_PRESETS.find(p => p.id === compositeFilter)?.color || ''
+                  }`}>
+                    <Filter className="h-3 w-3" />
+                    {FILTER_PRESETS.find(p => p.id === compositeFilter)?.label}
+                    <span className="font-bold tabular-nums">({filteredSites.length})</span>
+                    <button
+                      onClick={() => { setCompositeFilter('all'); setFilter('all') }}
+                      className="ml-1 hover:opacity-70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                {nsFilter !== 'all' && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-500/10 text-violet-500">
+                    <Server className="h-3 w-3" />
+                    NS: {nsFilter}
+                    <button
+                      onClick={() => setNsFilter('all')}
+                      className="ml-1 hover:opacity-70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                {ipFilter !== 'all' && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-cyan-500/10 text-cyan-500">
+                    <Wifi className="h-3 w-3" />
+                    IP: {ipFilter}
+                    <button
+                      onClick={() => setIpFilter('all')}
+                      className="ml-1 hover:opacity-70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1513,6 +1652,30 @@ function DownDetector() {
                             }`}>
                               ↑{siteUptime.toFixed(0)}%
                             </span>
+                          )}
+                          {site.nameServers && site.nameServers.length > 0 && (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-[10px] font-mono text-violet-500 bg-violet-500/10 px-1.5 py-0.5 rounded shrink-0 hidden sm:inline-flex items-center gap-1 cursor-default">
+                                    <Server className="h-2.5 w-2.5" />
+                                    {(() => {
+                                      const parts = site.nameServers[0].split('.')
+                                      return parts.length >= 2 ? parts.slice(-2).join('.') : site.nameServers[0]
+                                    })()}
+                                    {site.nameServers.length > 1 && (
+                                      <span className="text-violet-400">+{site.nameServers.length - 1}</span>
+                                    )}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-[11px] max-w-[300px]">
+                                  <p className="font-semibold mb-1">Name Servers:</p>
+                                  {site.nameServers.map((ns, i) => (
+                                    <p key={i} className="font-mono">{ns}</p>
+                                  ))}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                         {/* Mini uptime chart */}

@@ -367,6 +367,7 @@ export const api = {
     status: 'online' | 'offline' | 'pending' | 'ssl'
     statusCode: number | null
     ipAddress: string | null
+    nameServers: string[]
     lastChecked: number | null
     addedAt: number
   }>> {
@@ -381,6 +382,7 @@ export const api = {
     status: 'online' | 'offline' | 'pending' | 'ssl'
     statusCode: number | null
     ipAddress: string | null
+    nameServers: string[]
     lastChecked: number | null
     addedAt: number
   }> {
@@ -405,6 +407,7 @@ export const api = {
       status: 'online' | 'offline' | 'pending' | 'ssl'
       statusCode: number | null
       ipAddress: string | null
+      nameServers: string[]
       lastChecked: number | null
       addedAt: number
     }>
@@ -449,6 +452,7 @@ export const api = {
       status: 'online' | 'offline' | 'ssl'
       statusCode: number | null
       ipAddress: string | null
+      nameServers: string[]
       lastChecked: number
     }>
   }> {
