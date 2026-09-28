@@ -38,6 +38,7 @@ O projeto combina um frontend em React + TypeScript (Vite) com uma API Node.js/E
 |   |-- lib/                  # Cliente da API, constantes, PDF e utilitários
 |   |-- pages/                # Páginas roteadas
 |   `-- types/                # Tipos compartilhados
+|-- server/                   # Módulos do backend (proteção SSRF)
 |-- server.js                 # API Express
 |-- .env.example              # Modelo de variáveis de ambiente
 |-- package.json
@@ -104,11 +105,11 @@ pnpm run db:test              # Verifica conexão e tabelas do MySQL
 
 **Destaques:**
 
-- API REST em Express com JWT, sessão única por usuário e migração automática de hashes legados para bcrypt.
+- API REST em Express com JWT em cookie HttpOnly/SameSite, sessão única por usuário e migração automática de hashes legados para bcrypt.
 - Controle de acesso por perfil (`master` / `standard`) no frontend e no backend.
 - Dashboards e relatórios com Recharts e exportação para PDF.
 - Importação em lote de trabalhos via CSV.
-- Down Detector com checagem de status HTTP, SSL e DNS.
+- Down Detector com checagem de status HTTP, SSL e DNS, protegido contra SSRF (bloqueio de redes internas e DNS rebinding).
 - Integração com OneTimeSecret para compartilhar credenciais com links de uso único.
 - Testes unitários com Vitest e suíte de integração da API.
 

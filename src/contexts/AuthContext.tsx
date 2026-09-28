@@ -4,53 +4,34 @@ import { API_URL } from '@/lib/api-url'
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
 
+// Chaves usadas por versões anteriores (token em localStorage) — removidas na carga
+const LEGACY_STORAGE_KEYS = ['jvx_token', 'jvx_user']
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null)
-  const [token, setToken] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
 
-  // Verificar token ao carregar
+  // Restaurar sessão: o JWT fica em cookie HttpOnly, então quem confirma a sessão é o backend
   React.useEffect(() => {
-    const storedToken = localStorage.getItem('jvx_token')
-    const storedUser = localStorage.getItem('jvx_user')
+    LEGACY_STORAGE_KEYS.forEach(key => localStorage.removeItem(key))
 
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser)
-        
-        // Verificar se o token ainda é válido no backend
-        fetch(`${API_URL}/auth/verify`, {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
-        })
-          .then(res => {
-            if (res.ok) {
-              setToken(storedToken)
-              setUser(parsedUser)
-            } else {
-              // Token inválido/expirado — limpar sessão
-              localStorage.removeItem('jvx_token')
-              localStorage.removeItem('jvx_user')
-            }
-          })
-          .catch(() => {
-            // Se o servidor estiver offline, confiar no token armazenado
-            setToken(storedToken)
-            setUser(parsedUser)
-          })
-          .finally(() => setLoading(false))
-        return
-      } catch (error) {
-        console.error('Erro ao recuperar sessão:', error)
-        localStorage.removeItem('jvx_token')
-        localStorage.removeItem('jvx_user')
-      }
-    }
-    setLoading(false)
+    fetch(`${API_URL}/auth/verify`, { credentials: 'include' })
+      .then(async res => {
+        if (res.ok) {
+          const data = await res.json()
+          setUser(data.user)
+        }
+      })
+      .catch(() => {
+        // Servidor offline: permanece deslogado
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const login = React.useCallback(async (username: string, password: string) => {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     })
@@ -61,36 +42,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await response.json()
-    
-    setToken(data.token)
     setUser(data.user)
-    
-    localStorage.setItem('jvx_token', data.token)
-    localStorage.setItem('jvx_user', JSON.stringify(data.user))
-    
+
     // Recarregar a página para limpar cache de dados
     window.location.href = '/'
   }, [])
 
   // Limpar sessão local (sem chamar o servidor)
   const clearSession = React.useCallback(() => {
-    setToken(null)
     setUser(null)
-    localStorage.removeItem('jvx_token')
-    localStorage.removeItem('jvx_user')
-    window.location.href = '/login'
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login'
+    }
   }, [])
 
   const logout = React.useCallback(() => {
-    // Notificar o servidor para invalidar a sessão (fire and forget)
-    const currentToken = localStorage.getItem('jvx_token')
-    if (currentToken) {
-      fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${currentToken}` }
-      }).catch(() => {})
-    }
-    clearSession()
+    // O servidor invalida a sessão e remove o cookie HttpOnly
+    fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    })
+      .catch(() => {})
+      .finally(clearSession)
   }, [clearSession])
 
   // Listener para sessão expirada/substituída por outro dispositivo
@@ -103,13 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(
     () => ({
       user,
-      token,
       loading,
       login,
       logout,
       isMaster: user?.role === 'master'
     }),
-    [user, token, loading, login, logout]
+    [user, loading, login, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -39,13 +39,10 @@ interface DeveloperInfoDialogProps {
 
 import { API_URL } from '@/lib/api-url'
 
-// Helper para obter headers de autenticação
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('jvx_token')
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : ''
-  }
+// A autenticação vai no cookie HttpOnly de sessão (credentials: 'include')
+const requestOptions = {
+  credentials: 'include' as const,
+  headers: { 'Content-Type': 'application/json' }
 }
 
 export function DeveloperInfoDialog({ developerName, isOpen, onClose }: DeveloperInfoDialogProps) {
@@ -61,9 +58,7 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
   React.useEffect(() => {
     if (isOpen && developerName) {
       setLoading(true)
-      fetch(`${API_URL}/developers/${encodeURIComponent(developerName)}`, {
-        headers: getAuthHeaders()
-      })
+      fetch(`${API_URL}/developers/${encodeURIComponent(developerName)}`, requestOptions)
         .then(res => {
           if (!res.ok) throw new Error('Erro ao carregar dados')
           return res.json()
@@ -99,8 +94,8 @@ export function DeveloperInfoDialog({ developerName, isOpen, onClose }: Develope
     setSaving(true)
     try {
       const response = await fetch(`${API_URL}/developers`, {
+        ...requestOptions,
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: developerName,
           phone: info.contacts.phone || null,

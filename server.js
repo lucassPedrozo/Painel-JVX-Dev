@@ -12,6 +12,7 @@ import https from "https";
 import http from "http";
 import dns from "dns";
 import { promisify } from "util";
+import { validateMonitorUrl, safeLookup } from "./server/ssrf-guard.js";
 
 const dnsResolve4 = promisify(dns.resolve4);
 
@@ -20,9 +21,10 @@ const dnsResolve4 = promisify(dns.resolve4);
 // ============================================
 
 // Agents HTTP com keep-alive para reutilizar conexões TCP/TLS
-const keepAliveHttpAgent = new http.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000 });
-const keepAliveHttpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000 });
-const keepAliveHttpsInsecureAgent = new https.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000, rejectUnauthorized: false });
+// Todos usam safeLookup para bloquear destinos internos (SSRF)
+const keepAliveHttpAgent = new http.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000, lookup: safeLookup });
+const keepAliveHttpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000, lookup: safeLookup });
+const keepAliveHttpsInsecureAgent = new https.Agent({ keepAlive: true, maxSockets: 50, timeout: 10000, rejectUnauthorized: false, lookup: safeLookup });
 
 // Cache DNS persistente com TTL (evita resolver o mesmo domínio repetidamente)
 const DNS_CACHE_TTL_MS = 120_000; // 2 minutos
@@ -138,7 +140,8 @@ const corsOptions = {
 
     return callback(new Error("CORS não permitido"));
   },
-  credentials: rawCorsOrigins.length > 0
+  // Necessário para o navegador enviar o cookie de sessão
+  credentials: true
 };
 app.use(cors(corsOptions));
 
@@ -161,6 +164,15 @@ const loginLimiter = rateLimit({
   message: { error: "Muitas tentativas. Tente novamente mais tarde." }
 });
 
+// Cada verificação dispara requisições de saída para todos os sites monitorados
+const checkLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas verificações em pouco tempo. Aguarde alguns minutos." }
+});
+
 app.use(globalLimiter);
 app.use("/auth/login", loginLimiter);
 
@@ -175,6 +187,34 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   console.error("❌ JWT_SECRET ausente ou fraco. Configure uma chave com 32+ caracteres.");
   process.exit(1);
+}
+
+// Sessão do navegador: JWT em cookie HttpOnly (inacessível a JavaScript/XSS).
+// SameSite=Strict impede o envio do cookie em requisições cross-site (CSRF).
+// COOKIE_SECURE=true exige HTTPS; por padrão ativo apenas em produção.
+const SESSION_COOKIE = "jvx_session";
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const COOKIE_SECURE = process.env.COOKIE_SECURE
+  ? process.env.COOKIE_SECURE === "true"
+  : NODE_ENV === "production";
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: COOKIE_SECURE,
+  sameSite: "strict",
+  path: "/"
+};
+
+function getCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) {
+      try { return decodeURIComponent(part.slice(idx + 1).trim()); } catch { return null; }
+    }
+  }
+  return null;
 }
 
 // Pool de conexões MySQL com Promises
@@ -207,8 +247,10 @@ const asyncHandler = (fn) => (req, res, next) => {
 // ============================================
 const authenticateToken = async (req, res, next) => {
   try {
+    // Navegador: cookie HttpOnly. Scripts/clientes de API: header Bearer.
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = bearerToken || getCookie(req, SESSION_COOKIE);
 
     if (!token) {
       return res.status(401).json({ error: "Token não fornecido" });
@@ -226,12 +268,14 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: "Usuário não encontrado ou inativo" });
     }
 
-    // Se o banco tem session_token, o JWT deve corresponder
+    // O JWT só vale para a sessão ativa no banco (logout ou novo login a invalidam)
     const dbSessionToken = rows[0].session_token;
-    if (dbSessionToken && dbSessionToken !== decoded.sessionToken) {
+    if (!dbSessionToken || dbSessionToken !== decoded.sessionToken) {
       return res.status(401).json({
-        error: "Sessão encerrada. Outro dispositivo fez login com esta conta.",
-        code: "SESSION_REPLACED"
+        error: dbSessionToken
+          ? "Sessão encerrada. Outro dispositivo fez login com esta conta."
+          : "Sessão encerrada. Faça login novamente.",
+        code: dbSessionToken ? "SESSION_REPLACED" : "SESSION_ENDED"
       });
     }
 
@@ -327,7 +371,10 @@ app.post("/auth/login", asyncHandler(async (req, res) => {
 
   console.log(`✓ Login bem-sucedido: ${user.username} (${user.role}) — sessão anterior invalidada`);
 
+  res.cookie(SESSION_COOKIE, token, { ...sessionCookieOptions, maxAge: SESSION_MAX_AGE_MS });
+
   res.json({
+    // Mantido para scripts/clientes de API (header Bearer); o frontend usa apenas o cookie
     token,
     user: {
       id: user.id,
@@ -340,17 +387,32 @@ app.post("/auth/login", asyncHandler(async (req, res) => {
 
 // Verificar token
 app.get("/auth/verify", authenticateToken, (req, res) => {
-  res.json({ valid: true, user: req.user });
+  const { id, username, role, developerName } = req.user;
+  res.json({ valid: true, user: { id, username, role, developerName } });
 });
 
 // Logout (invalidar sessão no servidor)
-app.post("/auth/logout", authenticateToken, asyncHandler(async (req, res) => {
-  await pool.execute(
-    "UPDATE users SET session_token = NULL WHERE id = ?",
-    [req.user.id]
-  );
+// Sempre remove o cookie, mesmo com sessão já expirada/substituída.
+app.post("/auth/logout", asyncHandler(async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null)
+    || getCookie(req, SESSION_COOKIE);
 
-  console.log(`✓ Logout: ${req.user.username}`);
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      // Só encerra a sessão se for a sessão ativa (não derruba um login mais novo)
+      await pool.execute(
+        "UPDATE users SET session_token = NULL WHERE id = ? AND session_token = ?",
+        [decoded.id, decoded.sessionToken]
+      );
+      console.log(`✓ Logout: ${decoded.username}`);
+    } catch {
+      // Token inválido/expirado: nada a invalidar no banco
+    }
+  }
+
+  res.clearCookie(SESSION_COOKIE, sessionCookieOptions);
 
   res.json({ success: true, message: "Logout realizado com sucesso" });
 }));
@@ -1315,8 +1377,14 @@ app.post("/ferramentas/down-detector/sites", authenticateToken, asyncHandler(asy
   const { url } = req.body;
   await ensureDownDetectorTable();
 
-  if (!url || !url.trim()) {
+  if (!url || typeof url !== "string" || !url.trim()) {
     return res.status(400).json({ error: "URL é obrigatória" });
+  }
+
+  try {
+    validateMonitorUrl(url);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 
   // Verificar duplicata (global, não por usuário)
@@ -1357,6 +1425,10 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
     return res.status(400).json({ error: "Lista de URLs vazia" });
   }
 
+  if (urls.length > 1000) {
+    return res.status(400).json({ error: "Máximo de 1000 URLs por importação" });
+  }
+
   // Buscar URLs existentes (global)
   const [existing] = await pool.execute(
     "SELECT LOWER(url) as url FROM monitored_sites"
@@ -1367,9 +1439,18 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
   const newSites = [];
   const skipped = [];
 
+  const invalid = [];
+
   for (const rawUrl of urls) {
-    const url = rawUrl.trim();
+    const url = typeof rawUrl === "string" ? rawUrl.trim() : "";
     if (!url) continue;
+
+    try {
+      validateMonitorUrl(url);
+    } catch {
+      invalid.push(url);
+      continue;
+    }
 
     if (existingUrls.has(url.toLowerCase())) {
       skipped.push(url);
@@ -1400,6 +1481,7 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
     success: true,
     imported: newSites.length,
     skipped: skipped.length,
+    invalid: invalid.length,
     sites: rows.map(row => ({
       id: String(row.id),
       url: row.url,
@@ -1414,18 +1496,25 @@ app.post("/ferramentas/down-detector/sites/import", authenticateToken, asyncHand
 }));
 
 // DELETE remover site
+// A lista é compartilhada pela equipe; remover é permitido ao master ou a quem cadastrou o site.
 app.delete("/ferramentas/down-detector/sites/:id", authenticateToken, asyncHandler(async (req, res) => {
   const siteId = req.params.id;
   await ensureDownDetectorTable();
 
-  const [result] = await pool.execute(
-    "DELETE FROM monitored_sites WHERE id = ?",
+  const [rows] = await pool.execute(
+    "SELECT user_id FROM monitored_sites WHERE id = ?",
     [siteId]
   );
 
-  if (result.affectedRows === 0) {
+  if (rows.length === 0) {
     return res.status(404).json({ error: "Site não encontrado" });
   }
+
+  if (req.user.role !== 'master' && rows[0].user_id !== req.user.id) {
+    return res.status(403).json({ error: "Você só pode remover sites que cadastrou" });
+  }
+
+  await pool.execute("DELETE FROM monitored_sites WHERE id = ?", [siteId]);
 
   res.json({ success: true });
 }));
@@ -1439,17 +1528,33 @@ app.post("/ferramentas/down-detector/sites/remove-bulk", authenticateToken, asyn
     return res.status(400).json({ error: "Lista de IDs vazia" });
   }
 
-  const placeholders = ids.map(() => "?").join(", ");
+  const safeIds = ids.map(id => String(id)).filter(id => /^\d+$/.test(id)).slice(0, 1000);
+  if (safeIds.length === 0) {
+    return res.status(400).json({ error: "Lista de IDs inválida" });
+  }
+
+  const placeholders = safeIds.map(() => "?").join(", ");
+
+  if (req.user.role !== 'master') {
+    const [notOwned] = await pool.execute(
+      `SELECT id FROM monitored_sites WHERE id IN (${placeholders}) AND user_id <> ?`,
+      [...safeIds, req.user.id]
+    );
+    if (notOwned.length > 0) {
+      return res.status(403).json({ error: "Você só pode remover sites que cadastrou" });
+    }
+  }
+
   await pool.execute(
     `DELETE FROM monitored_sites WHERE id IN (${placeholders})`,
-    [...ids]
+    safeIds
   );
 
   res.json({ success: true });
 }));
 
 // POST verificar status de sites (todos ou por IDs específicos)
-app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(async (req, res) => {
+app.post("/ferramentas/down-detector/check", checkLimiter, authenticateToken, asyncHandler(async (req, res) => {
   await ensureDownDetectorTable();
 
   const { ids } = req.body || {};
@@ -1502,13 +1607,17 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
         ? (rejectUnauthorized ? keepAliveHttpsAgent : keepAliveHttpsInsecureAgent)
         : keepAliveHttpAgent;
 
+      // Revalida a URL (inclusive destinos de redirect) contra SSRF
+      try { validateMonitorUrl(parsedUrl.toString()); } catch (e) { return reject(e); }
+
       const options = {
-        hostname: parsedUrl.hostname,
+        hostname: parsedUrl.hostname.replace(/^\[|\]$/g, ''),
         port: parsedUrl.port || (isHttps ? 443 : 80),
         path: parsedUrl.pathname + parsedUrl.search,
         method,
         timeout: TIMEOUT_MS,
         agent,
+        lookup: safeLookup,
         headers: {
           'User-Agent': 'JVX-DownDetector/1.0',
           Connection: 'keep-alive',
@@ -1531,6 +1640,9 @@ app.post("/ferramentas/down-detector/check", authenticateToken, asyncHandler(asy
 
       req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
       req.on('error', (err) => {
+        if (err.code === 'EBLOCKEDDEST') {
+          return reject({ isSslError: false, originalError: err });
+        }
         // Se HEAD falhar por motivo não-SSL, tenta GET como fallback
         if (method === 'HEAD' && !err.message?.includes('CERT') && !err.message?.includes('SSL')) {
           checkUrl(url, rejectUnauthorized, redirectCount, 'GET').then(resolve).catch(reject);

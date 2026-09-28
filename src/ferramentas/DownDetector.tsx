@@ -406,8 +406,8 @@ function DownDetector() {
       await api.removeMonitoredSite(id)
       setSites(prev => prev.filter(s => s.id !== id))
       toast.success('Site removido')
-    } catch {
-      toast.error('Erro ao remover site')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao remover site')
     }
   }
 
@@ -483,8 +483,8 @@ function DownDetector() {
       setSites(prev => prev.filter(s => !selectedIds.has(s.id)))
       toast.success(`${ids.length} site${ids.length > 1 ? 's' : ''} removido${ids.length > 1 ? 's' : ''}`)
       setSelectedIds(new Set())
-    } catch {
-      toast.error('Erro ao remover sites')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao remover sites')
     }
   }
 
@@ -701,6 +701,7 @@ function DownDetector() {
       const msgs: string[] = []
       if (result.imported > 0) msgs.push(`${result.imported} importado(s)`)
       if (result.skipped > 0) msgs.push(`${result.skipped} já existente(s)`)
+      if (result.invalid > 0) msgs.push(`${result.invalid} ignorada(s) por endereço não permitido`)
       toast.success(`Importação concluída: ${msgs.join(', ')}`)
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro ao importar CSV'

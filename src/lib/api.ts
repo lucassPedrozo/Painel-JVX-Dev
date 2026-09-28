@@ -5,28 +5,19 @@ export type { Work, User, Developer }
 
 import { API_URL } from '@/lib/api-url'
 
-// Helper para obter headers de autenticação
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('jvx_token')
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  }
-}
-
-// Fetch wrapper com tratamento automático de sessão expirada/invalidada
+// Fetch wrapper: a sessão vai no cookie HttpOnly (credentials: 'include'),
+// com tratamento automático de sessão expirada/invalidada
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
-      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {}),
     }
   })
 
   if (response.status === 401) {
-    localStorage.removeItem('jvx_token')
-    localStorage.removeItem('jvx_user')
     window.dispatchEvent(new CustomEvent('auth:session-expired'))
     throw new Error('Sessão expirada. Faça login novamente.')
   }
@@ -401,6 +392,7 @@ export const api = {
     success: boolean
     imported: number
     skipped: number
+    invalid: number
     sites: Array<{
       id: string
       url: string

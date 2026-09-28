@@ -58,7 +58,6 @@ export interface Developer {
 
 export interface AuthContextType {
   user: User | null
-  token: string | null
   loading: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => void

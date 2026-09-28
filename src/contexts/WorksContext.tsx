@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { api } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Work, WorksContextType } from '@/types'
 
 const WorksContext = React.createContext<WorksContextType | undefined>(undefined)
@@ -9,6 +10,7 @@ export function WorksProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
   const loadingRef = React.useRef(false)
+  const { user, loading: authLoading } = useAuth()
 
   const loadWorks = React.useCallback(() => {
     // Prevenir reloads simultâneos
@@ -31,14 +33,14 @@ export function WorksProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   React.useEffect(() => {
-    // Só buscar dados se houver token de autenticação
-    const token = localStorage.getItem('jvx_token')
-    if (token) {
+    // Só buscar dados depois que a sessão (cookie) for confirmada pelo backend
+    if (authLoading) return
+    if (user) {
       loadWorks()
     } else {
       setLoading(false)
     }
-  }, [loadWorks])
+  }, [authLoading, user, loadWorks])
 
   const value = React.useMemo(
     () => ({ works, loading, error, reload: loadWorks }),
