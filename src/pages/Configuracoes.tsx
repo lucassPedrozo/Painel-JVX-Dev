@@ -159,8 +159,8 @@ function Configuracoes() {
   const handleDownloadTemplate = () => {
     const template = [
       'Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template,Status Desenvolvedor,Template URL',
-      'Alexandre,Normal,"R$ 200,00",exemplo-com-br.example.com,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,,Concluído,',
-      'Leandro,Prazo Reduzido,"R$ 150,00",exemplo2-com-br.example.com,Landing Page,15/05/2024,Maio,2024,Entregue,Pago,Template customizado,Concluído,https://themeforest.net/item/exemplo'
+      'Dev Alpha,Normal,"R$ 200,00",cliente-alpha.example.com,Site Institucional,01/04/2024,Abril,2024,Entregue,Pago,,Concluído,',
+      'Dev Beta,Prazo Reduzido,"R$ 150,00",cliente-bravo.example.com,Landing Page,15/05/2024,Maio,2024,Entregue,Pago,Template customizado,Concluído,https://themeforest.net/item/exemplo'
     ].join('\n')
 
     const blob = new Blob(['\uFEFF' + template], { type: 'text/csv;charset=utf-8;' })

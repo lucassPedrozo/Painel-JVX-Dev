@@ -406,7 +406,7 @@ function DownDetector() {
       await api.removeMonitoredSite(id)
       setSites(prev => prev.filter(s => s.id !== id))
       toast.success('Site removido')
-    } catch (error) {
+    } catch {
       toast.error('Erro ao remover site')
     }
   }
@@ -483,7 +483,7 @@ function DownDetector() {
       setSites(prev => prev.filter(s => !selectedIds.has(s.id)))
       toast.success(`${ids.length} site${ids.length > 1 ? 's' : ''} removido${ids.length > 1 ? 's' : ''}`)
       setSelectedIds(new Set())
-    } catch (error) {
+    } catch {
       toast.error('Erro ao remover sites')
     }
   }

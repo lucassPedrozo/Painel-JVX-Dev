@@ -71,9 +71,9 @@ async function run() {
   })
 
   await test('POST /auth/login - login master bem-sucedido', async () => {
-    const r = await request('POST', '/auth/login', { username: 'admin', password: 'admin123' })
+    const r = await request('POST', '/auth/login', { username: 'jvxadmin', password: 'admin123' })
     if (!r.ok) {
-      console.log('    ⚠ Verifique se o usuário admin/admin123 existe no banco')
+      console.log('    ⚠ Verifique se o usuário jvxadmin/admin123 existe no banco')
       throw new Error(`Login falhou: ${r.status} - ${JSON.stringify(r.data)}`)
     }
     assert(r.data.token, 'Token não retornado')

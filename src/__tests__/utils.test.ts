@@ -158,7 +158,7 @@ describe('cn', () => {
   })
 
   it('ignora valores falsy', () => {
-    expect(cn('px-2', false && 'py-1', undefined, null)).toBe('px-2')
+    expect(cn('px-2', false, undefined, null)).toBe('px-2')
   })
 
   it('suporta condicionais', () => {

@@ -1,0 +1,9 @@
+Desenvolvedor,Prazo,Valor R$,Domínio Desenvolvimento,Tipo de Site,Data Entrega,Mês,Ano,Status,Pagamento,OBS ou Template
+Dev Alpha,Normal,"R$ 200,00",cliente-alpha.example.com,Site Institucional,05/03/2024,Março,2024,Entregue,Pago,
+Dev Alpha,Normal,"R$ 250,00",cliente-bravo.example.com,Site Institucional,22/03/2024,Março,2024,Entregue,Pago,"Adicional de R$50,00 - Tempo e complexidade"
+Dev Beta,Prazo Reduzido,"R$ 150,00",cliente-charlie.example.com,Landing Page,01/04/2024,Abril,2024,Entregue,Pago,Template customizado
+Dev Beta,Normal,"R$ 200,00",cliente-delta.example.com,Site Institucional,15/04/2024,Abril,2024,Entregue,Não Pago,
+Dev Gamma,Normal,"R$ 300,00",cliente-echo.example.com,Site Corporativo,10/05/2024,Maio,2024,Entregue,Pago,
+Dev Gamma,Normal,"R$ 200,00",cliente-foxtrot.example.com,Site Institucional,28/05/2024,Maio,2024,Não Entregue,Não Pago,
+Dev Alpha,Prazo Reduzido,"R$ 180,00",cliente-golf.example.com,Landing Page,12/06/2024,Junho,2024,Entregue,Pago,
+Dev Beta,Normal,"R$ 220,00",cliente-hotel.example.com,Site Institucional,30/06/2024,Junho,2024,Não Entregue,Não Pago,

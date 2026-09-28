@@ -55,7 +55,7 @@ function GeradorLinkSenhas() {
     try {
       const data = await api.getHistoricoSenhas()
       setHistorico(data)
-    } catch (error) {
+    } catch {
       // Se falhar, tenta carregar do localStorage como fallback
       const localHistorico = localStorage.getItem('jvx_historico_senhas')
       if (localHistorico) {
@@ -68,7 +68,7 @@ function GeradorLinkSenhas() {
     try {
       await api.salvarHistoricoSenhas(novoHistorico)
       setHistorico(novoHistorico)
-    } catch (error) {
+    } catch {
       // Fallback para localStorage
       localStorage.setItem('jvx_historico_senhas', JSON.stringify(novoHistorico))
       setHistorico(novoHistorico)
