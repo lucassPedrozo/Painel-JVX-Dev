@@ -69,3 +69,6 @@ coverage
 # Database
 *.sql.backup
 backup_*.sql
+
+# Documentos internos (não versionar)
+docs/private/
