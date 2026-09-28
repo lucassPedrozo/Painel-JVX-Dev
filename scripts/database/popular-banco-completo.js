@@ -12,262 +12,147 @@ const dbConfig = {
   database: process.env.DB_NAME || 'worksdb'
 };
 
-// Dados de exemplo para popular o banco
+// Dados de exemplo 100% fictícios (equipe, clientes e valores inventados).
+// Gerados de forma determinística para que o seed produza sempre o mesmo resultado.
+
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+const CLIENTES = [
+  'padaria-bom-sabor', 'clinica-vida-plena', 'advocacia-martins', 'construtora-horizonte', 'pet-shop-amigo-fiel',
+  'escola-aprender', 'oficina-motor-forte', 'imobiliaria-casa-nova', 'studio-pilates-equilibrio', 'restaurante-sabor-caseiro',
+  'contabilidade-exata', 'otica-visao-clara', 'academia-corpo-ativo', 'floricultura-jardim', 'transportadora-rota-sul',
+  'dentista-sorriso', 'loja-moda-urbana', 'cafeteria-grao-nobre', 'engenharia-estrutural', 'agencia-viagens-mundo',
+  'marcenaria-arte-madeira', 'veterinaria-patas', 'energia-solar-sol', 'consultoria-rh-talentos', 'grafica-impressao-rapida',
+  'hotel-serra-azul', 'eventos-celebrar', 'seguros-protecao', 'tecnologia-nuvem', 'nutricionista-equilibrio',
+  'arquitetura-linhas', 'fisioterapia-movimento', 'eletrica-alta-tensao', 'vidracaria-cristal', 'buffet-festa-boa',
+  'metalurgica-aco-forte', 'cursos-online-saber', 'barbearia-classica', 'lavanderia-express', 'psicologia-bem-estar'
+];
+
+const TIPOS = [
+  { type: 'Site Institucional', base: 250 },
+  { type: 'Site Institucional', base: 250 },
+  { type: 'Site Institucional', base: 280 },
+  { type: 'Landing Page', base: 180 },
+  { type: 'Landing Page', base: 200 },
+  { type: 'Site Corporativo', base: 380 },
+  { type: 'E-commerce', base: 650 },
+  { type: 'Blog', base: 220 },
+  { type: 'Portfólio', base: 200 }
+];
+
+const TEMPLATES = [
+  'https://themeforest.net/item/exemplo-business',
+  'https://themeforest.net/item/exemplo-clinic',
+  'https://themeforest.net/item/exemplo-shop',
+  null,
+  null
+];
+
+const DEVS = ['Ana Ribeiro', 'Bruno Carvalho', 'Carla Mendes', 'Diego Santos'];
+
+// Gerador pseudoaleatório com semente fixa (mulberry32)
+function criarRandom(seed) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function gerarProjetos() {
+  const rand = criarRandom(2026);
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)];
+  const works = [];
+  let cliente = 0;
+
+  // Janeiro/2025 até Setembro/2026, com volume crescente
+  for (let ano = 2025; ano <= 2026; ano++) {
+    const ultimoMes = ano === 2026 ? 8 : 11;
+    for (let mes = 0; mes <= ultimoMes; mes++) {
+      const recente = ano === 2026 && mes >= 7;
+      const quantidade = 2 + Math.floor(rand() * 3) + (ano === 2026 ? 1 : 0);
+
+      for (let i = 0; i < quantidade; i++) {
+        const tipo = pick(TIPOS);
+        const prazoReduzido = rand() < 0.2;
+        const valor = tipo.base + (prazoReduzido ? 50 : 0) + Math.floor(rand() * 4) * 10;
+        const dia = 1 + Math.floor(rand() * 27);
+        const data = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        const nome = CLIENTES[cliente++ % CLIENTES.length];
+
+        // Projetos antigos: entregues e pagos. Mais recentes: mistura de estados.
+        let status = 'Entregue';
+        let developerStatus = 'Concluído';
+        let pagamento = 'Pago';
+        if (recente) {
+          const r = rand();
+          if (r < 0.35) { status = 'Não Entregue'; developerStatus = 'Em Andamento'; pagamento = 'Não Pago'; }
+          else if (r < 0.6) { status = 'Não Entregue'; pagamento = 'Não Pago'; }
+          else if (r < 0.8) { pagamento = 'Não Pago'; }
+        } else if (ano === 2026 && mes >= 5 && rand() < 0.3) {
+          pagamento = 'Não Pago';
+        }
+
+        const avaliado = status === 'Entregue' && rand() < 0.8;
+        const nota = () => 3 + Math.floor(rand() * 3);
+
+        works.push({
+          developer: pick(DEVS),
+          deadline_type: prazoReduzido ? 'Prazo Reduzido' : 'Normal',
+          value: valor,
+          domain: `${nome}.example.com`,
+          site_type: tipo.type,
+          template: pick(TEMPLATES),
+          delivery_date: data,
+          delivery_month: MESES[mes],
+          delivery_year: ano,
+          status,
+          developer_status: developerStatus,
+          payment_status: pagamento,
+          observations: prazoReduzido ? 'Entrega antecipada a pedido do cliente' : null,
+          rating_aparencia: avaliado ? nota() : null,
+          rating_complexidade: avaliado ? nota() : null,
+          rating_satisfacao: avaliado ? nota() : null,
+          rating_material: avaliado ? nota() : null
+        });
+      }
+    }
+  }
+  return works;
+}
+
 const dadosExemplo = {
   users: [
-    {
-      username: 'jvxadmin',
-      password: 'admin123',
-      role: 'master',
-      developer_name: null,
-      active: true
-    },
-    {
-      username: 'leandro.dev',
-      password: 'dev123',
-      role: 'standard',
-      developer_name: 'Leandro',
-      active: true
-    },
-    {
-      username: 'heron.dev',
-      password: 'dev123',
-      role: 'standard',
-      developer_name: 'Heron',
-      active: true
-    }
+    { username: 'jvxadmin', password: 'admin123', role: 'master', developer_name: null, active: true },
+    { username: 'ana.dev', password: 'dev123', role: 'standard', developer_name: 'Ana Ribeiro', active: true },
+    { username: 'bruno.dev', password: 'dev123', role: 'standard', developer_name: 'Bruno Carvalho', active: true }
   ],
-  
+
   developers: [
     {
-      name: 'Leandro',
-      phone: '(11) 99999-1111',
-      email: 'leandro@example.com',
-      whatsapp: '5511999991111',
-      pixKey: 'leandro@example.com',
-      pixType: 'Email',
-      bankName: 'Banco do Brasil',
-      agency: '1234-5',
-      account: '12345-6',
-      observations: 'Desenvolvedor sênior especializado em React'
+      name: 'Ana Ribeiro', phone: '(11) 90000-0001', email: 'ana@example.com', whatsapp: '5511900000001',
+      pixKey: 'ana@example.com', pixType: 'Email', bankName: 'Banco Exemplo', agency: '0001', account: '10001-0',
+      observations: 'Front-end, especialista em sites institucionais'
     },
     {
-      name: 'Heron',
-      phone: '(11) 99999-2222',
-      email: 'heron@example.com',
-      whatsapp: '5511999992222',
-      pixKey: '123.456.789-00',
-      pixType: 'CPF',
-      bankName: 'Itaú',
-      agency: '5678-9',
-      account: '98765-4',
-      observations: 'Desenvolvedor full-stack com foco em Node.js'
+      name: 'Bruno Carvalho', phone: '(11) 90000-0002', email: 'bruno@example.com', whatsapp: '5511900000002',
+      pixKey: 'bruno@example.com', pixType: 'Email', bankName: 'Banco Exemplo', agency: '0001', account: '10002-0',
+      observations: 'Full-stack, foco em e-commerce'
     },
     {
-      name: 'Alexandre',
-      phone: '(11) 99999-3333',
-      email: 'alexandre@example.com',
-      whatsapp: '5511999993333',
-      pixKey: 'alexandre@example.com',
-      pixType: 'Email',
-      bankName: 'Santander',
-      agency: '9876-5',
-      account: '54321-0',
-      observations: 'Desenvolvedor frontend especializado em UI/UX'
+      name: 'Carla Mendes', phone: '(11) 90000-0003', email: 'carla@example.com', whatsapp: '5511900000003',
+      pixKey: 'carla@example.com', pixType: 'Email', bankName: 'Banco Exemplo', agency: '0001', account: '10003-0',
+      observations: 'UI/UX e landing pages'
+    },
+    {
+      name: 'Diego Santos', phone: '(11) 90000-0004', email: 'diego@example.com', whatsapp: '5511900000004',
+      pixKey: 'diego@example.com', pixType: 'Email', bankName: 'Banco Exemplo', agency: '0001', account: '10004-0',
+      observations: 'WordPress e blogs'
     }
   ],
-  
-  works: [
-    // Projetos de 2024 - Todos concluídos e entregues
-    {
-      developer: 'Leandro',
-      deadline_type: 'Normal',
-      value: 250.00,
-      domain: 'empresa-exemplo.com.br',
-      site_type: 'Site Institucional',
-      delivery_date: '2024-01-15',
-      delivery_month: 'Janeiro',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Site institucional com sistema de contato'
-    },
-    {
-      developer: 'Heron',
-      deadline_type: 'Prazo Reduzido',
-      value: 300.00,
-      domain: 'loja-virtual.com.br',
-      site_type: 'Site Corporativo',
-      delivery_date: '2024-01-20',
-      delivery_month: 'Janeiro',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'E-commerce completo com pagamento online'
-    },
-    {
-      developer: 'Alexandre',
-      deadline_type: 'Normal',
-      value: 200.00,
-      domain: 'landing-produto.com.br',
-      site_type: 'Landing Page',
-      delivery_date: '2024-02-01',
-      delivery_month: 'Fevereiro',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Landing page para lançamento de produto'
-    },
-    {
-      developer: 'Leandro',
-      deadline_type: 'Normal',
-      value: 280.00,
-      domain: 'consultoria-tech.com.br',
-      site_type: 'Site Corporativo',
-      delivery_date: '2024-02-15',
-      delivery_month: 'Fevereiro',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Site corporativo com blog integrado'
-    },
-    {
-      developer: 'Heron',
-      deadline_type: 'Normal',
-      value: 220.00,
-      domain: 'clinica-saude.com.br',
-      site_type: 'Site Institucional',
-      delivery_date: '2024-03-01',
-      delivery_month: 'Março',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Site para clínica médica com agendamento online'
-    },
-    {
-      developer: 'Alexandre',
-      deadline_type: 'Prazo Reduzido',
-      value: 350.00,
-      domain: 'evento-tech.com.br',
-      site_type: 'Landing Page',
-      delivery_date: '2024-03-10',
-      delivery_month: 'Março',
-      delivery_year: 2024,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Landing page para evento de tecnologia'
-    },
-    
-    // Projetos de 2025 - Alguns concluídos pelo dev mas ainda não entregues pelo master
-    {
-      developer: 'Leandro',
-      deadline_type: 'Normal',
-      value: 300.00,
-      domain: 'startup-inovacao.com.br',
-      site_type: 'Site Corporativo',
-      delivery_date: '2025-01-15',
-      delivery_month: 'Janeiro',
-      delivery_year: 2025,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Site para startup de inovação tecnológica'
-    },
-    {
-      developer: 'Heron',
-      deadline_type: 'Normal',
-      value: 250.00,
-      domain: 'restaurante-gourmet.com.br',
-      site_type: 'Site Institucional',
-      delivery_date: '2025-02-01',
-      delivery_month: 'Fevereiro',
-      delivery_year: 2025,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Site para restaurante com cardápio online'
-    },
-    {
-      developer: 'Alexandre',
-      deadline_type: 'Normal',
-      value: 180.00,
-      domain: 'curso-online.com.br',
-      site_type: 'Landing Page',
-      delivery_date: '2025-02-15',
-      delivery_month: 'Fevereiro',
-      delivery_year: 2025,
-      status: 'Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Pago',
-      observations: 'Landing page para curso online'
-    },
-    {
-      developer: 'Leandro',
-      deadline_type: 'Prazo Reduzido',
-      value: 400.00,
-      domain: 'fintech-pagamentos.com.br',
-      site_type: 'Site Corporativo',
-      delivery_date: '2025-03-01',
-      delivery_month: 'Março',
-      delivery_year: 2025,
-      status: 'Não Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Não Pago',
-      observations: 'Projeto concluído pelo dev, aguardando aprovação do master'
-    },
-    
-    // Projetos em andamento - Dev ainda trabalhando
-    {
-      developer: 'Heron',
-      deadline_type: 'Normal',
-      value: 320.00,
-      domain: 'projeto-em-andamento.com.br',
-      site_type: 'Site Corporativo',
-      delivery_date: '2025-12-15',
-      delivery_month: 'Dezembro',
-      delivery_year: 2025,
-      status: 'Não Entregue',
-      developer_status: 'Em Andamento',
-      payment_status: 'Não Pago',
-      observations: 'Projeto em desenvolvimento - prazo dezembro'
-    },
-    {
-      developer: 'Alexandre',
-      deadline_type: 'Normal',
-      value: 200.00,
-      domain: 'landing-futura.com.br',
-      site_type: 'Landing Page',
-      delivery_date: '2025-11-30',
-      delivery_month: 'Novembro',
-      delivery_year: 2025,
-      status: 'Não Entregue',
-      developer_status: 'Em Andamento',
-      payment_status: 'Não Pago',
-      observations: 'Landing page em desenvolvimento'
-    },
-    
-    // Projeto concluído pelo dev mas master ainda não aprovou
-    {
-      developer: 'Heron',
-      deadline_type: 'Normal',
-      value: 275.00,
-      domain: 'aguardando-aprovacao.com.br',
-      site_type: 'Site Institucional',
-      delivery_date: '2025-10-15',
-      delivery_month: 'Outubro',
-      delivery_year: 2025,
-      status: 'Não Entregue',
-      developer_status: 'Concluído',
-      payment_status: 'Não Pago',
-      observations: 'Projeto finalizado pelo desenvolvedor, aguardando revisão e aprovação'
-    }
-  ]
+
+  works: gerarProjetos()
 };
 
 async function popularBanco() {
@@ -334,8 +219,8 @@ async function popularBanco() {
     console.log('\n5. Inserindo projetos...');
     for (const work of dadosExemplo.works) {
       await connection.execute(
-        'INSERT INTO works (developer, deadline_type, value, domain, site_type, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [work.developer, work.deadline_type, work.value, work.domain, work.site_type, work.delivery_date, work.delivery_month, work.delivery_year, work.status, work.developer_status, work.payment_status, work.observations]
+        'INSERT INTO works (developer, deadline_type, value, domain, site_type, template, delivery_date, delivery_month, delivery_year, status, developer_status, payment_status, observations, rating_aparencia, rating_complexidade, rating_satisfacao, rating_material) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [work.developer, work.deadline_type, work.value, work.domain, work.site_type, work.template, work.delivery_date, work.delivery_month, work.delivery_year, work.status, work.developer_status, work.payment_status, work.observations, work.rating_aparencia, work.rating_complexidade, work.rating_satisfacao, work.rating_material]
       );
     }
     console.log(`  ✓ ${dadosExemplo.works.length} projetos criados`);
@@ -378,11 +263,11 @@ async function popularBanco() {
     console.log('='.repeat(80));
     console.log('\n🔐 Credenciais de acesso:');
     console.log('  Master: jvxadmin / admin123');
-    console.log('  Dev Leandro: leandro.dev / dev123');
-    console.log('  Dev Heron: heron.dev / dev123');
+    console.log('  Dev Ana: ana.dev / dev123');
+    console.log('  Dev Bruno: bruno.dev / dev123');
     console.log('\n🚀 Você pode agora:');
-    console.log('  1. Iniciar o servidor: npm run server');
-    console.log('  2. Iniciar o frontend: npm run dev');
+    console.log('  1. Iniciar o servidor: pnpm run server');
+    console.log('  2. Iniciar o frontend: pnpm run dev');
     console.log('  3. Acessar: http://localhost:5173');
     
   } catch (error) {

@@ -72,3 +72,6 @@ backup_*.sql
 
 # Documentos internos (não versionar)
 docs/private/
+
+# Configuração local do Claude Code
+.claude/

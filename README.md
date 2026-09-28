@@ -2,6 +2,10 @@
 
 Sistema web interno para gestão de projetos de desenvolvimento de sites. A aplicação centraliza trabalhos, entregas, pagamentos, equipe, relatórios e ferramentas operacionais em um painel autenticado com perfis `master` e `standard`.
 
+![Dashboard](docs/images/dashboard.png)
+
+> Todas as capturas usam dados fictícios gerados pelo script de seed.
+
 ## Visão geral
 
 O projeto combina um frontend em React + TypeScript (Vite) com uma API Node.js/Express e persistência em MySQL. A autenticação é feita por JWT com sessão única por usuário, e as rotas administrativas são restritas ao perfil `master`. O fluxo principal é cadastrar trabalhos, acompanhar entrega e pagamento de cada desenvolvedor e consolidar os números em dashboards e relatórios exportáveis.
@@ -18,6 +22,30 @@ O projeto combina um frontend em React + TypeScript (Vite) com uma API Node.js/E
 - Gerador de links de uso único para compartilhar credenciais (via OneTimeSecret).
 - Down Detector para monitorar disponibilidade, SSL e DNS de sites.
 - Opção para ocultar valores financeiros na interface.
+
+## Telas
+
+| Login | Projetos |
+| --- | --- |
+| ![Login](docs/images/login.png) | ![Projetos](docs/images/projetos.png) |
+| **Calendário** | **Equipe** |
+| ![Calendário](docs/images/calendario.png) | ![Equipe](docs/images/equipe.png) |
+| **Relatórios** | **Gerador de links seguros** |
+| ![Relatórios](docs/images/relatorios.png) | ![Gerador de links](docs/images/gerador-links.png) |
+
+<details>
+<summary><strong>Análises e gráficos</strong></summary>
+
+![Análises](docs/images/analises.png)
+
+</details>
+
+<details>
+<summary><strong>Down Detector</strong></summary>
+
+![Down Detector](docs/images/down-detector.png)
+
+</details>
 
 ## Estrutura do projeto
 
@@ -55,7 +83,7 @@ Pré-requisitos: Node.js 18+, pnpm e MySQL 8 (ou MariaDB compatível).
 pnpm install
 cp .env.example .env          # defina JWT_SECRET (32+ caracteres) e os dados do banco
 mysql -u root -p < database/database-init-clean.sql
-pnpm run db:seed              # opcional: dados de exemplo
+pnpm run db:seed              # opcional: ~80 projetos fictícios para demonstração
 ```
 
 Em dois terminais:
@@ -65,7 +93,15 @@ pnpm run server               # API em http://localhost:3001
 pnpm run dev                  # Frontend em http://localhost:5173
 ```
 
-O script SQL cria o usuário `jvxadmin` com a senha `admin123`, apenas para uso local. Troque essa senha antes de expor o sistema em qualquer rede.
+Usuários de demonstração (apenas para uso local):
+
+| Usuário | Senha | Perfil |
+| --- | --- | --- |
+| `jvxadmin` | `admin123` | master (criado pelo script SQL) |
+| `ana.dev` | `dev123` | standard (criado pelo seed) |
+| `bruno.dev` | `dev123` | standard (criado pelo seed) |
+
+Troque essas senhas antes de expor o sistema em qualquer rede.
 
 Outros scripts úteis:
 
@@ -126,4 +162,12 @@ pnpm run db:test              # Verifica conexão e tabelas do MySQL
 
 **Imagens:**
 
-- Ainda não adicionadas. Sugestão: salvar capturas de tela em `docs/images/`.
+- `docs/images/dashboard.png`
+- `docs/images/login.png`
+- `docs/images/projetos.png`
+- `docs/images/analises.png`
+- `docs/images/calendario.png`
+- `docs/images/equipe.png`
+- `docs/images/relatorios.png`
+- `docs/images/down-detector.png`
+- `docs/images/gerador-links.png`
